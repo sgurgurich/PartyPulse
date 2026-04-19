@@ -10,6 +10,8 @@ local DEFAULTS = {
     scale = 1.0,
     displayMode = "icons",
     showBackdrop = false,
+    showName = false,
+    namePosition = "left",
 }
 
 -- Spells whose tracking should default to OFF instead of ON.
@@ -188,6 +190,29 @@ function ns.config.Register()
     )
     backdropSetting:SetValueChangedCallback(function(_, value) ns.ui.SetBackdropShown(value) end)
     Settings.CreateCheckbox(category, backdropSetting, "Show the dark background and border behind the frame.")
+
+    -- Show player name
+    local showNameSetting = Settings.RegisterAddOnSetting(
+        category, "PartyPulse_ShowName", "showName", PartyPulseDB,
+        Settings.VarType.Boolean, "Show player name", DEFAULTS.showName
+    )
+    showNameSetting:SetValueChangedCallback(function() ns.ui.RebuildAll() end)
+    Settings.CreateCheckbox(category, showNameSetting, "Show each party member's name on their row.")
+
+    -- Player name position
+    local namePosSetting = Settings.RegisterAddOnSetting(
+        category, "PartyPulse_NamePosition", "namePosition", PartyPulseDB,
+        Settings.VarType.String, "Player name position", DEFAULTS.namePosition
+    )
+    namePosSetting:SetValueChangedCallback(function() ns.ui.RebuildAll() end)
+    local function GetNamePosOptions()
+        local c = Settings.CreateControlTextContainer()
+        c:Add("left",  "Left of cooldowns")
+        c:Add("above", "Above cooldowns")
+        return c:GetData()
+    end
+    Settings.CreateDropdown(category, namePosSetting, GetNamePosOptions,
+        "Where to place the player name relative to their cooldowns.")
 
     -- Display mode dropdown
     local displaySetting = Settings.RegisterAddOnSetting(

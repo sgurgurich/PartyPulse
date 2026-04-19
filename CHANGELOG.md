@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.0
+
+- Bars are now colored by the class of the player whose cooldown they represent.
+- Player name is hidden by default; new "Show player name" toggle and "Player name position" dropdown (Left of cooldowns / Above cooldowns) under Settings.
+
 ## v0.2.1
 
 - Death Grip is now off by default in the spell list (still toggleable).

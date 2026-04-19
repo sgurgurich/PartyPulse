@@ -20,6 +20,16 @@ local function DisplayMode()
     return (PartyPulseDB and PartyPulseDB.displayMode) or "icons"
 end
 
+local function ShowName()
+    return PartyPulseDB and PartyPulseDB.showName == true
+end
+
+local function NamePosition()
+    return (PartyPulseDB and PartyPulseDB.namePosition) or "left"
+end
+
+local NAME_HEIGHT = 14
+
 local function GetSpellIcon(spellID)
     if C_Spell and C_Spell.GetSpellInfo then
         local info = C_Spell.GetSpellInfo(spellID)
@@ -130,6 +140,11 @@ local function CreateBarWidget(parent)
         self.name:SetText(GetSpellName(spellID))
     end
 
+    function w:SetClassColor(class)
+        local c = RAID_CLASS_COLORS[class]
+        if c then self:SetStatusBarColor(c.r, c.g, c.b) end
+    end
+
     local function OnUpdate(self)
         local remaining = self.endTime - GetTime()
         if remaining <= 0 then
@@ -167,6 +182,10 @@ local function CreateBothWidget(parent)
         self.bar:SetSpell(spellID)
     end
 
+    function w:SetClassColor(class)
+        self.bar:SetClassColor(class)
+    end
+
     function w:Trigger(cd)
         self.icon:Trigger(cd)
         self.bar:Trigger(cd)
@@ -202,12 +221,44 @@ local function StacksVertically()
     return mode == "bars" or mode == "both"
 end
 
+local function NameInline()
+    return ShowName() and NamePosition() == "left"
+end
+
+local function NameAbove()
+    return ShowName() and NamePosition() == "above"
+end
+
+local function LayoutName(row)
+    row.name:ClearAllPoints()
+    if not ShowName() then
+        row.name:Hide()
+        return
+    end
+    row.name:Show()
+    if NameAbove() then
+        row.name:SetPoint("TOPLEFT", 0, 0)
+        row.name:SetWidth(0)  -- let it size to text
+        row.name:SetJustifyH("LEFT")
+    else
+        row.name:SetPoint("LEFT", 0, 0)
+        row.name:SetWidth(NAME_WIDTH)
+        row.name:SetJustifyH("LEFT")
+    end
+end
+
 local function LayoutWidgets(row)
     local stack = StacksVertically()
     for i, w in ipairs(row.widgets) do
         w:ClearAllPoints()
         if i == 1 then
-            w:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
+            if NameInline() then
+                w:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
+            elseif NameAbove() then
+                w:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -NAME_HEIGHT - 2)
+            else
+                w:SetPoint("LEFT", row, "LEFT", 0, 0)
+            end
         elseif stack then
             w:SetPoint("TOPLEFT", row.widgets[i - 1], "BOTTOMLEFT", 0, -2)
         else
@@ -218,10 +269,12 @@ local function LayoutWidgets(row)
 end
 
 local function RowHeight(nSpells)
+    local h = ROW_HEIGHT
     if StacksVertically() and nSpells > 1 then
-        return ICON_SIZE + (nSpells - 1) * (ICON_SIZE + 2) + 4
+        h = ICON_SIZE + (nSpells - 1) * (ICON_SIZE + 2) + 4
     end
-    return ROW_HEIGHT
+    if NameAbove() then h = h + NAME_HEIGHT + 2 end
+    return h
 end
 
 local function LayoutRows()
@@ -238,11 +291,12 @@ local function LayoutRows()
     local totalH = math.max(1, -y + PADDING - 4)
     container:SetHeight(totalH)
     local mode = DisplayMode()
+    local nameOffset = NameInline() and NAME_WIDTH or 0
     local w
     if mode == "bars" then
-        w = NAME_WIDTH + BAR_WIDTH + PADDING * 2 + 20
+        w = nameOffset + BAR_WIDTH + PADDING * 2 + 20
     elseif mode == "both" then
-        w = NAME_WIDTH + ICON_SIZE + 4 + BAR_WIDTH + PADDING * 2 + 20
+        w = nameOffset + ICON_SIZE + 4 + BAR_WIDTH + PADDING * 2 + 20
     else
         w = 260
     end
@@ -262,6 +316,7 @@ local function ApplyMember(unitName, data)
     local short = unitName:match("^[^-]+") or unitName
     row.name:SetText(short)
     row.name:SetTextColor(color.r, color.g, color.b)
+    LayoutName(row)
 
     for _, w in ipairs(row.widgets) do w:Hide() end
     row.widgets = {}
@@ -269,6 +324,7 @@ local function ApplyMember(unitName, data)
     for i, spell in ipairs(data.spells) do
         local w = CreateWidget(row)
         w:SetSpell(spell.id)
+        if w.SetClassColor then w:SetClassColor(data.class) end
         row.widgets[i] = w
         row.widgetByID[spell.id] = w
     end
