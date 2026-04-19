@@ -25,10 +25,15 @@ local DEFAULTS = {
     rowGap = 4,
     testMode = false,
     barUseClassColor = true,
+    barInvert = false,
+    showReadyText = true,
+    readyText = "Ready",
+    cooldownFormat = "%.1f",
     bgColor = { r = 0, g = 0, b = 0, a = 0.5 },
     borderColor = { r = 1, g = 1, b = 1, a = 1 },
     barBgColor = { r = 0, g = 0, b = 0, a = 0.5 },
-    barFillColor = { r = 0.2, g = 0.8, b = 0.2, a = 1 },
+    barFillColor = { r = 0.6, g = 0.1, b = 0.1, a = 1 },
+    barReadyColor = { r = 0.2, g = 0.8, b = 0.2, a = 1 },
     textColor = { r = 1, g = 1, b = 1, a = 1 },
 }
 
@@ -291,6 +296,61 @@ local function AddDropdownRow(panel, label, varKey, options, onChange)
     return row
 end
 
+-- ---- Row: label + free-form text input ---------------------------------
+local function AddTextInputRow(panel, label, varKey, onChange, tooltip)
+    local row = CreateFrame("Frame", nil, panel)
+    row:SetSize(580, ROW_H)
+    row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY())
+
+    local lbl = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    lbl:SetPoint("LEFT", 0, 0)
+    lbl:SetWidth(LABEL_W)
+    lbl:SetJustifyH("LEFT")
+    lbl:SetText(label)
+
+    local edit = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
+    edit:SetPoint("LEFT", LABEL_W + 10, 0)
+    edit:SetSize(220, 20)
+    edit:SetAutoFocus(false)
+    edit:SetMaxLetters(24)
+    edit:SetTextInsets(4, 4, 2, 2)
+
+    edit:SetScript("OnEnterPressed", function(self)
+        PartyPulseDB[varKey] = self:GetText() or ""
+        if onChange then onChange(PartyPulseDB[varKey]) end
+        self:ClearFocus()
+    end)
+    edit:SetScript("OnEscapePressed", function(self)
+        self:SetText(PartyPulseDB[varKey] or "")
+        self:SetCursorPosition(0)
+        self:ClearFocus()
+    end)
+    edit:SetScript("OnShow", function(self)
+        self:SetText(PartyPulseDB[varKey] or "")
+        self:SetCursorPosition(0)
+        self:ClearFocus()
+    end)
+
+    if tooltip then
+        row:EnableMouse(true)
+        row:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+            GameTooltip:Show()
+        end)
+        row:SetScript("OnLeave", GameTooltip_Hide)
+    end
+
+    function row:Refresh()
+        edit:SetText(PartyPulseDB[varKey] or "")
+        edit:SetCursorPosition(0)
+    end
+    row:Refresh()
+
+    panel:AddRow(row)
+    return row
+end
+
 -- ---- Row: label + color swatch button ----------------------------------
 local function OpenColorPicker(current, hasAlpha, onChange)
     local r, g, b = current.r, current.g, current.b
@@ -428,6 +488,15 @@ local function BuildTextPanel()
         "Toggle whether the spell name is drawn on each bar.")
     AddSliderRow(f, "Spell name font size", "spellNameFontSize", 6, 32, 1, function() ns.ui.RebuildAll() end)
     AddSliderRow(f, "Countdown font size",  "timeFontSize",      6, 32, 1, function() ns.ui.RebuildAll() end)
+    AddDropdownRow(f, "Countdown format", "cooldownFormat", {
+        { "%.1f",  "5.3"  },
+        { "%d",    "5"    },
+        { "%.1fs", "5.3s" },
+        { "%ds",   "5s"   },
+    }, function() ns.ui.RebuildAll() end)
+    AddCheckRow(f, "Show \"Ready\" text when off cooldown", "showReadyText", function() ns.ui.RebuildAll() end)
+    AddTextInputRow(f, "Ready text", "readyText", function() ns.ui.RebuildAll() end,
+        "Shown inside the bar when the spell is off cooldown.")
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     return f
 end
@@ -438,8 +507,13 @@ local function BuildColorsPanel()
     AddColorRow(f, "Backdrop border",     "borderColor", true, function() ns.ui.SetBackdropShown(PartyPulseDB.showBackdrop) end)
     AddColorRow(f, "Bar background",      "barBgColor",  true, function() ns.ui.RebuildAll() end)
     AddCheckRow(f, "Use class color for bars", "barUseClassColor", function() ns.ui.RebuildAll() end,
-        "When on, each bar is colored by the cooldown owner's class. When off, uses the bar fill color below.")
-    AddColorRow(f, "Bar fill color (override)", "barFillColor", true, function() ns.ui.RebuildAll() end)
+        "When on, the on-cooldown fill is the owner's class color. When off, uses the override below.")
+    AddColorRow(f, "Bar on-cooldown color (override)", "barFillColor", true, function() ns.ui.RebuildAll() end,
+        "Used when \"Use class color for bars\" is off.")
+    AddColorRow(f, "Bar ready color", "barReadyColor", true, function() ns.ui.RebuildAll() end,
+        "Fill color when the spell is off cooldown.")
+    AddCheckRow(f, "Invert bar direction", "barInvert", function() ns.ui.RebuildAll() end,
+        "When on, bars fill from empty to full as the cooldown progresses instead of draining.")
     AddColorRow(f, "Text color",           "textColor",  true, function() ns.ui.RebuildAll() end,
         "Applies to the spell name and countdown text on bars. Player name keeps the class color.")
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)

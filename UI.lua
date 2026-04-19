@@ -31,6 +31,10 @@ local function NameFontSize()      return (PartyPulseDB and PartyPulseDB.nameFon
 local function SpellNameFontSize() return (PartyPulseDB and PartyPulseDB.spellNameFontSize) or 11 end
 local function TimeFontSize()      return (PartyPulseDB and PartyPulseDB.timeFontSize) or 11 end
 local function BarUseClassColor()  return not (PartyPulseDB and PartyPulseDB.barUseClassColor == false) end
+local function BarInvert()         return PartyPulseDB and PartyPulseDB.barInvert == true end
+local function ShowReadyText()     return not (PartyPulseDB and PartyPulseDB.showReadyText == false) end
+local function ReadyText()         return (PartyPulseDB and PartyPulseDB.readyText) or "Ready" end
+local function CooldownFormat()    return (PartyPulseDB and PartyPulseDB.cooldownFormat) or "%.1f" end
 
 local function ColorOr(key, dr, dg, db, da)
     local c = PartyPulseDB and PartyPulseDB[key]
@@ -165,35 +169,56 @@ local function CreateBarWidget(parent)
 
     w.kind = "bar"
 
+    local function applyCooldownColor(self)
+        if BarUseClassColor() and self._class then
+            local c = RAID_CLASS_COLORS[self._class]
+            if c then self:SetStatusBarColor(c.r, c.g, c.b) return end
+        end
+        self:SetStatusBarColor(ColorOr("barFillColor", 0.6, 0.1, 0.1, 1))
+    end
+
+    local function applyReadyColor(self)
+        self:SetStatusBarColor(ColorOr("barReadyColor", 0.2, 0.8, 0.2, 1))
+    end
+
+    function w:ApplyIdle()
+        self:SetScript("OnUpdate", nil)
+        applyReadyColor(self)
+        self:SetValue(1)
+        if ShowReadyText() then
+            self.text:SetText(ReadyText())
+        else
+            self.text:SetText("")
+        end
+    end
+
     function w:SetSpell(spellID)
         self.name:SetText(GetSpellName(spellID))
+        self:ApplyIdle()
     end
 
     function w:SetClassColor(class)
-        if BarUseClassColor() then
-            local c = RAID_CLASS_COLORS[class]
-            if c then self:SetStatusBarColor(c.r, c.g, c.b) end
-        else
-            self:SetStatusBarColor(ColorOr("barFillColor", 0.2, 0.8, 0.2, 1))
-        end
+        self._class = class
+        -- idle state uses ready color; nothing to change now.
     end
 
     local function OnUpdate(self)
         local remaining = self.endTime - GetTime()
         if remaining <= 0 then
-            self:SetValue(0)
-            self.text:SetText("")
-            self:SetScript("OnUpdate", nil)
+            self:ApplyIdle()
             return
         end
-        self:SetValue(remaining / self.duration)
-        self.text:SetFormattedText("%.1f", remaining)
+        local frac = remaining / self.duration
+        if BarInvert() then frac = 1 - frac end
+        self:SetValue(frac)
+        self.text:SetFormattedText(CooldownFormat(), remaining)
     end
 
     function w:Trigger(cd)
         self.duration = cd
         self.endTime = GetTime() + cd
-        self:SetValue(1)
+        applyCooldownColor(self)
+        self:SetValue(BarInvert() and 0 or 1)
         self:SetScript("OnUpdate", OnUpdate)
     end
 

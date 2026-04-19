@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.0
+
+- Bars now have separate "ready" and "on-cooldown" fill colors. Ready color defaults to green, on-cooldown color defaults to class color (toggle "Use class color for bars" off to use a custom override).
+- New "Invert bar direction" toggle fills bars up during cooldown instead of draining them.
+- New "Show Ready text" toggle (on by default) renders customizable idle text inside the bar when the spell is off cooldown.
+- Customizable countdown format ("5.3", "5", "5.3s", "5s").
+
 ## v0.5.1
 
 - Slider editboxes now reliably prepopulate with the current value when a settings panel opens.
