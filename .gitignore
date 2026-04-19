@@ -1,0 +1,8 @@
+.DS_Store
+*.bak
+*.swp
+*.log
+.vscode/
+.idea/
+.release/
+release/

@@ -1,0 +1,12 @@
+## Interface: 120000
+## Title: PartyPulse
+## Notes: Party interrupt cooldown tracker (Midnight-compatible, self-report model)
+## Version: 0.1.0
+## Author: stefan
+## SavedVariables: PartyPulseDB
+
+Spells.lua
+Comm.lua
+UI.lua
+Config.lua
+Core.lua
