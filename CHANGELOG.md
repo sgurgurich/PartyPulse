@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.0
+
+- New "Test mode" toggle simulates 4 party members (Death Knight, Mage, Shaman, Druid) with randomized cooldowns every ~2.5s for previewing layouts.
+- Sliders for icon size, bar width, bar height, and spell spacing.
+- Sliders for player-name X/Y offset (precise name positioning).
+
 ## v0.3.0
 
 - Bars are now colored by the class of the player whose cooldown they represent.

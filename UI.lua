@@ -10,11 +10,21 @@ local container
 local memberData = {} -- name -> { class = ..., spells = {{id,cd},...}, active = {[id]=endTime} }
 
 local ROW_HEIGHT = 28
-local ICON_SIZE = 24
-local ICON_GAP = 2
-local BAR_WIDTH = 140
 local NAME_WIDTH = 90
 local PADDING = 10
+
+-- Tunable sizes live in saved variables; these are the defaults / fallbacks.
+local DEFAULT_ICON_SIZE = 24
+local DEFAULT_BAR_WIDTH = 140
+local DEFAULT_BAR_HEIGHT = 18
+local DEFAULT_SPELL_GAP = 2
+
+local function IconSize()  return (PartyPulseDB and PartyPulseDB.iconSize)  or DEFAULT_ICON_SIZE end
+local function BarWidth()  return (PartyPulseDB and PartyPulseDB.barWidth)  or DEFAULT_BAR_WIDTH end
+local function BarHeight() return (PartyPulseDB and PartyPulseDB.barHeight) or DEFAULT_BAR_HEIGHT end
+local function SpellGap()  return (PartyPulseDB and PartyPulseDB.spellGap)  or DEFAULT_SPELL_GAP end
+local function NameOffsetX() return (PartyPulseDB and PartyPulseDB.nameOffsetX) or 0 end
+local function NameOffsetY() return (PartyPulseDB and PartyPulseDB.nameOffsetY) or 0 end
 
 local function DisplayMode()
     return (PartyPulseDB and PartyPulseDB.displayMode) or "icons"
@@ -97,8 +107,9 @@ end
 
 -- ---- icon widget ----------------------------------------------------------
 local function CreateIconWidget(parent)
+    local sz = IconSize()
     local w = CreateFrame("Frame", nil, parent)
-    w:SetSize(ICON_SIZE, ICON_SIZE)
+    w:SetSize(sz, sz)
     w.tex = w:CreateTexture(nil, "ARTWORK")
     w.tex:SetAllPoints()
     w.cooldown = CreateFrame("Cooldown", nil, w, "CooldownFrameTemplate")
@@ -117,7 +128,7 @@ end
 -- Pure bar: no icon. Spell name on the left, remaining seconds on the right.
 local function CreateBarWidget(parent)
     local w = CreateFrame("StatusBar", nil, parent)
-    w:SetSize(BAR_WIDTH, ICON_SIZE - 6)
+    w:SetSize(BarWidth(), BarHeight())
     w:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
     w:SetStatusBarColor(0.2, 0.8, 0.2)
     w:SetMinMaxValues(0, 1)
@@ -169,8 +180,9 @@ end
 
 -- ---- composite icon+bar widget -------------------------------------------
 local function CreateBothWidget(parent)
+    local sz = IconSize()
     local w = CreateFrame("Frame", nil, parent)
-    w:SetSize(ICON_SIZE + 4 + BAR_WIDTH, ICON_SIZE)
+    w:SetSize(sz + 4 + BarWidth(), sz)
     w.icon = CreateIconWidget(w)
     w.icon:SetPoint("LEFT")
     w.bar = CreateBarWidget(w)
@@ -237,11 +249,11 @@ local function LayoutName(row)
     end
     row.name:Show()
     if NameAbove() then
-        row.name:SetPoint("TOPLEFT", 0, 0)
+        row.name:SetPoint("TOPLEFT", NameOffsetX(), NameOffsetY())
         row.name:SetWidth(0)  -- let it size to text
         row.name:SetJustifyH("LEFT")
     else
-        row.name:SetPoint("LEFT", 0, 0)
+        row.name:SetPoint("LEFT", NameOffsetX(), NameOffsetY())
         row.name:SetWidth(NAME_WIDTH)
         row.name:SetJustifyH("LEFT")
     end
@@ -249,6 +261,7 @@ end
 
 local function LayoutWidgets(row)
     local stack = StacksVertically()
+    local gap = SpellGap()
     for i, w in ipairs(row.widgets) do
         w:ClearAllPoints()
         if i == 1 then
@@ -260,18 +273,24 @@ local function LayoutWidgets(row)
                 w:SetPoint("LEFT", row, "LEFT", 0, 0)
             end
         elseif stack then
-            w:SetPoint("TOPLEFT", row.widgets[i - 1], "BOTTOMLEFT", 0, -2)
+            w:SetPoint("TOPLEFT", row.widgets[i - 1], "BOTTOMLEFT", 0, -gap)
         else
-            w:SetPoint("LEFT", row.widgets[i - 1], "RIGHT", ICON_GAP, 0)
+            w:SetPoint("LEFT", row.widgets[i - 1], "RIGHT", gap, 0)
         end
         w:Show()
     end
 end
 
+local function UnitHeight()
+    if DisplayMode() == "bars" then return BarHeight() end
+    return IconSize()
+end
+
 local function RowHeight(nSpells)
     local h = ROW_HEIGHT
-    if StacksVertically() and nSpells > 1 then
-        h = ICON_SIZE + (nSpells - 1) * (ICON_SIZE + 2) + 4
+    if StacksVertically() and nSpells >= 1 then
+        local unit = UnitHeight()
+        h = unit + (nSpells - 1) * (unit + SpellGap()) + 4
     end
     if NameAbove() then h = h + NAME_HEIGHT + 2 end
     return h
@@ -294,11 +313,11 @@ local function LayoutRows()
     local nameOffset = NameInline() and NAME_WIDTH or 0
     local w
     if mode == "bars" then
-        w = nameOffset + BAR_WIDTH + PADDING * 2 + 20
+        w = nameOffset + BarWidth() + PADDING * 2 + 20
     elseif mode == "both" then
-        w = nameOffset + ICON_SIZE + 4 + BAR_WIDTH + PADDING * 2 + 20
+        w = nameOffset + IconSize() + 4 + BarWidth() + PADDING * 2 + 20
     else
-        w = 260
+        w = nameOffset + 6 * IconSize() + PADDING * 2 + 20
     end
     container:SetWidth(w)
 end
@@ -414,6 +433,44 @@ end
 function ns.ui.SetScale(scale)
     if not container then return end
     container:SetScale(scale or 1.0)
+end
+
+-- ---- test mode ------------------------------------------------------------
+local TEST_MEMBERS = {
+    { name = "TestDK-Test",     class = "DEATHKNIGHT" },
+    { name = "TestMage-Test",   class = "MAGE" },
+    { name = "TestShaman-Test", class = "SHAMAN" },
+    { name = "TestDruid-Test",  class = "DRUID" },
+}
+
+local testTicker
+
+local function StopTestMode()
+    if testTicker then testTicker:Cancel(); testTicker = nil end
+    for _, m in ipairs(TEST_MEMBERS) do
+        ns.ui.RemoveMember(m.name)
+    end
+end
+
+local function StartTestMode()
+    for _, m in ipairs(TEST_MEMBERS) do
+        local spells = ns.GetInterruptsFor(m.class, nil)
+        if #spells > 0 then
+            ns.ui.SetMember(m.name, m.class, spells)
+        end
+    end
+    if testTicker then testTicker:Cancel() end
+    testTicker = C_Timer.NewTicker(2.5, function()
+        local m = TEST_MEMBERS[math.random(#TEST_MEMBERS)]
+        local spells = ns.GetInterruptsFor(m.class, nil)
+        if #spells == 0 then return end
+        local s = spells[math.random(#spells)]
+        ns.ui.TriggerCD(m.name, s.id, s.cd)
+    end)
+end
+
+function ns.ui.SetTestMode(on)
+    if on then StartTestMode() else StopTestMode() end
 end
 
 function ns.ui.RebuildAll()

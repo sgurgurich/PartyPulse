@@ -12,6 +12,13 @@ local DEFAULTS = {
     showBackdrop = false,
     showName = false,
     namePosition = "left",
+    nameOffsetX = 0,
+    nameOffsetY = 0,
+    iconSize = 24,
+    barWidth = 140,
+    barHeight = 18,
+    spellGap = 2,
+    testMode = false,
 }
 
 -- Spells whose tracking should default to OFF instead of ON.
@@ -34,6 +41,7 @@ function ns.config.ApplyAll()
     ns.ui.SetLocked(PartyPulseDB.locked)
     ns.ui.SetScale(PartyPulseDB.scale)
     ns.ui.SetBackdropShown(PartyPulseDB.showBackdrop)
+    if PartyPulseDB.testMode then ns.ui.SetTestMode(true) end
 end
 
 function ns.config.Open()
@@ -213,6 +221,45 @@ function ns.config.Register()
     end
     Settings.CreateDropdown(category, namePosSetting, GetNamePosOptions,
         "Where to place the player name relative to their cooldowns.")
+
+    -- Name offset X / Y
+    local function MakeNameOffsetSlider(varKey, label, tooltip)
+        local setting = Settings.RegisterAddOnSetting(
+            category, "PartyPulse_" .. varKey, varKey, PartyPulseDB,
+            Settings.VarType.Number, label, DEFAULTS[varKey]
+        )
+        setting:SetValueChangedCallback(function() ns.ui.RebuildAll() end)
+        local opts = Settings.CreateSliderOptions(-200, 200, 1)
+        opts:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
+        Settings.CreateSlider(category, setting, opts, tooltip)
+    end
+    MakeNameOffsetSlider("nameOffsetX", "Name offset X", "Horizontal offset of the player name.")
+    MakeNameOffsetSlider("nameOffsetY", "Name offset Y", "Vertical offset of the player name.")
+
+    -- Icon / bar sizing + spacing
+    local function MakeSizeSlider(varKey, label, min, max, step, tooltip)
+        local setting = Settings.RegisterAddOnSetting(
+            category, "PartyPulse_" .. varKey, varKey, PartyPulseDB,
+            Settings.VarType.Number, label, DEFAULTS[varKey]
+        )
+        setting:SetValueChangedCallback(function() ns.ui.RebuildAll() end)
+        local opts = Settings.CreateSliderOptions(min, max, step)
+        opts:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
+        Settings.CreateSlider(category, setting, opts, tooltip)
+    end
+    MakeSizeSlider("iconSize",  "Icon size",   16, 64,  1, "Width/height of cooldown icons.")
+    MakeSizeSlider("barWidth",  "Bar width",   60, 320, 5, "Width of the bar in Bars and Icons+Bars modes.")
+    MakeSizeSlider("barHeight", "Bar height",   8, 40,  1, "Height of the bar in Bars and Icons+Bars modes.")
+    MakeSizeSlider("spellGap",  "Spell spacing", 0, 20, 1, "Gap between cooldowns within a row.")
+
+    -- Test mode
+    local testSetting = Settings.RegisterAddOnSetting(
+        category, "PartyPulse_TestMode", "testMode", PartyPulseDB,
+        Settings.VarType.Boolean, "Test mode", DEFAULTS.testMode
+    )
+    testSetting:SetValueChangedCallback(function(_, value) ns.ui.SetTestMode(value) end)
+    Settings.CreateCheckbox(category, testSetting,
+        "Show 4 simulated party members (DK/Mage/Shaman/Druid) with randomized cooldowns every ~2.5s.")
 
     -- Display mode dropdown
     local displaySetting = Settings.RegisterAddOnSetting(
