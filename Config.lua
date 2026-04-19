@@ -469,8 +469,8 @@ local function BuildSizingPanel()
     AddSliderRow(f, "Bar height",   "barHeight",  4,   40,  1,    function() ns.ui.RebuildAll() end)
     AddSliderRow(f, "Spell spacing","spellGap",  -4,   20,  1,    function() ns.ui.RebuildAll() end,
         "Spacing between cooldowns within a member's row. Can go negative for tighter layouts.")
-    AddSliderRow(f, "Row spacing",  "rowGap",     0,   40,  1,    function() ns.ui.RebuildAll() end,
-        "Spacing between party member rows.")
+    AddSliderRow(f, "Row spacing",  "rowGap",    -20,  40,  1,    function() ns.ui.RebuildAll() end,
+        "Spacing between party member rows. Can go negative to make bars touch or overlap.")
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     return f
 end

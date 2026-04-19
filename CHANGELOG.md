@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.1
+
+- Row spacing slider can now go negative (-20 to 40) so bars can truly touch or overlap.
+
 ## v0.6.0
 
 - Bars now have separate "ready" and "on-cooldown" fill colors. Ready color defaults to green, on-cooldown color defaults to class color (toggle "Use class color for bars" off to use a custom override).
