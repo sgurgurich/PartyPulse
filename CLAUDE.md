@@ -54,12 +54,12 @@ Defaults live in `Config.lua` `DEFAULTS` and are back-filled in `EnsureDefaults(
 ## Distribution
 
 - **Source of truth:** GitHub (`sgurgurich/PartyPulse`)
-- **Workflow:** `.github/workflows/release.yml` runs on tag push (`v*`) or `workflow_dispatch`. Uses `BigWigsMods/packager@v2` which reads `.pkgmeta` and publishes to CurseForge via `CF_API_KEY` secret. Also uploads `.release/PartyPulse*.zip` as a run artifact (note: `.release/` is a hidden dir, `include-hidden-files: true` is required).
+- **Workflow:** `.github/workflows/release.yml` runs on tag push (`v*`) or `workflow_dispatch`. Uses `BigWigsMods/packager@v2` which reads `.pkgmeta` and publishes to CurseForge via `CF_API_KEY` secret, and attaches the addon zip to the auto-created GitHub Release on annotated-tag pushes.
 - **CurseForge project ID:** 1519200 (set via `X-Curse-Project-ID` in the TOC).
 - **Wago:** not set up yet. Add `X-Wago-ID` TOC line and `WAGO_API_TOKEN` secret when ready.
 - **GitHub releases:** packager auto-creates them only for annotated tags. Use `git tag -a vX.Y.Z -m "..."`, not lightweight tags.
 
-Test a build without tagging: `gh workflow run release.yml --ref main` then grab the zip from the run's Artifacts section.
+Test a build without tagging: `gh workflow run release.yml --ref main` will run the packager and upload to CurseForge, but no GitHub Release (and therefore no downloadable zip outside CF) is produced for non-tag runs. To get a local zip from a dispatch run, re-add an `actions/upload-artifact` step temporarily.
 
 ## In-game install / testing
 
@@ -71,7 +71,6 @@ Test a build without tagging: `gh workflow run release.yml --ref main` then grab
 ## Gotchas to remember
 
 - Lightweight git tags do not create GitHub releases via the packager. Use annotated tags.
-- `include-hidden-files: true` is required on `actions/upload-artifact@v4` to pick up `.release/`.
 - CHAT_MSG_ADDON sender format is `Name-Realm`. `UnitName("player")` returns just `Name`. Normalize to `Name-Realm` everywhere (see `GetPlayerFullName`).
 - The Settings panel caches registered settings; spec-specific spell toggles are registered from the player's *current* spec at login. `/reload` after a respec to refresh the toggle list. (Toggle *behavior* still applies instantly; it's just the panel's checkbox list that's static.)
 - `C_ChatInfo.RegisterAddonMessagePrefix` must be called before any send/receive; done in `comm.Init()` on PLAYER_LOGIN.
