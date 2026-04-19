@@ -103,6 +103,22 @@ function ns.RefreshSelf()
     AnnounceSelf()
 end
 
+-- Re-apply every known member with the current spell-enable filter,
+-- so toggling a spell off in settings hides it on party members too.
+function ns.RefreshAll()
+    EnsureSelfRow()
+    AnnounceSelf()
+    for name, m in pairs(members) do
+        if name ~= playerFullName then
+            local filtered = {}
+            for _, s in ipairs(m.spells) do
+                if IsSpellEnabled(s.id) then filtered[#filtered + 1] = s end
+            end
+            ns.ui.SetMember(name, m.class, filtered)
+        end
+    end
+end
+
 local function HandleMessage(text, sender)
     if sender == playerFullName then return end
     local kind, rest = text:match("^([^:]+):(.*)$")
@@ -113,7 +129,11 @@ local function HandleMessage(text, sender)
         local spells = DecodeSpellList(class, csv)
         if class and #spells > 0 then
             members[sender] = { class = class, spells = spells }
-            ns.ui.SetMember(sender, class, spells)
+            local filtered = {}
+            for _, s in ipairs(spells) do
+                if IsSpellEnabled(s.id) then filtered[#filtered + 1] = s end
+            end
+            ns.ui.SetMember(sender, class, filtered)
             -- Reply with our own HELLO + any currently-active cooldowns (whispered)
             local mine = EnabledSpells()
             if #mine > 0 then
@@ -125,7 +145,7 @@ local function HandleMessage(text, sender)
     elseif kind == "CD" then
         local idStr, cdStr = rest:match("^(%d+):(%d+)$")
         local spellID, cd = tonumber(idStr), tonumber(cdStr)
-        if spellID and cd and members[sender] then
+        if spellID and cd and members[sender] and IsSpellEnabled(spellID) then
             ns.ui.TriggerCD(sender, spellID, cd)
         end
     elseif kind == "SYNC" then
@@ -133,7 +153,7 @@ local function HandleMessage(text, sender)
         for pair in string.gmatch(rest, "[^;]+") do
             local idStr, remStr = pair:match("^(%d+),(%d+)$")
             local spellID, remaining = tonumber(idStr), tonumber(remStr)
-            if spellID and remaining and remaining > 0 then
+            if spellID and remaining and remaining > 0 and IsSpellEnabled(spellID) then
                 ns.ui.TriggerCD(sender, spellID, remaining)
             end
         end

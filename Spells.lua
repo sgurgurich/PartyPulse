@@ -39,6 +39,31 @@ function ns.GetInterruptsFor(class, specID)
     return out
 end
 
+-- Returns a deduped list of every tracked spell across all classes and spec overrides.
+-- Each entry: { id, cd, class }. Used by the settings panel so users can toggle any spell.
+function ns.AllTrackedSpells()
+    local seen = {}
+    local out = {}
+    local function add(s, class)
+        if seen[s.id] then return end
+        seen[s.id] = true
+        out[#out + 1] = { id = s.id, cd = s.cd, class = class }
+    end
+    for class, list in pairs(ns.INTERRUPTS) do
+        for _, s in ipairs(list) do add(s, class) end
+    end
+    for specID, entry in pairs(ns.INTERRUPTS_BY_SPEC) do
+        local source = entry.replace or entry
+        local class
+        if GetSpecializationInfoByID then
+            local _, _, _, _, _, classFile = GetSpecializationInfoByID(specID)
+            class = classFile
+        end
+        for _, s in ipairs(source) do add(s, class) end
+    end
+    return out
+end
+
 function ns.GetSpellCD(class, specID, spellID)
     for _, s in ipairs(ns.GetInterruptsFor(class, specID)) do
         if s.id == spellID then return s.cd end

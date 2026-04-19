@@ -12,7 +12,7 @@ local memberData = {} -- name -> { class = ..., spells = {{id,cd},...}, active =
 local ROW_HEIGHT = 28
 local ICON_SIZE = 24
 local ICON_GAP = 2
-local BAR_WIDTH = 120
+local BAR_WIDTH = 140
 local NAME_WIDTH = 90
 local PADDING = 10
 
@@ -26,6 +26,14 @@ local function GetSpellIcon(spellID)
         if info then return info.iconID end
     end
     return 134400
+end
+
+local function GetSpellName(spellID)
+    if C_Spell and C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(spellID)
+        if info and info.name then return info.name end
+    end
+    return tostring(spellID)
 end
 
 local function SavePosition(f)
@@ -87,34 +95,30 @@ local function CreateIconWidget(parent)
 end
 
 -- ---- bar widget -----------------------------------------------------------
+-- Pure bar: no icon. Spell name on the left, remaining seconds on the right.
 local function CreateBarWidget(parent)
-    local w = CreateFrame("Frame", nil, parent)
-    w:SetSize(BAR_WIDTH + ICON_SIZE + 4, ICON_SIZE)
+    local w = CreateFrame("StatusBar", nil, parent)
+    w:SetSize(BAR_WIDTH, ICON_SIZE - 6)
+    w:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+    w:SetStatusBarColor(0.2, 0.8, 0.2)
+    w:SetMinMaxValues(0, 1)
+    w:SetValue(0)
 
-    w.icon = w:CreateTexture(nil, "ARTWORK")
-    w.icon:SetSize(ICON_SIZE, ICON_SIZE)
-    w.icon:SetPoint("LEFT")
+    w.bg = w:CreateTexture(nil, "BACKGROUND")
+    w.bg:SetAllPoints()
+    w.bg:SetColorTexture(0, 0, 0, 0.5)
 
-    w.bar = CreateFrame("StatusBar", nil, w)
-    w.bar:SetPoint("LEFT", w.icon, "RIGHT", 4, 0)
-    w.bar:SetSize(BAR_WIDTH, ICON_SIZE - 6)
-    w.bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-    w.bar:SetStatusBarColor(0.2, 0.8, 0.2)
-    w.bar:SetMinMaxValues(0, 1)
-    w.bar:SetValue(0)
+    w.name = w:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    w.name:SetPoint("LEFT", 4, 0)
 
-    w.bar.bg = w.bar:CreateTexture(nil, "BACKGROUND")
-    w.bar.bg:SetAllPoints()
-    w.bar.bg:SetColorTexture(0, 0, 0, 0.5)
-
-    w.text = w.bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    w.text:SetPoint("CENTER")
+    w.text = w:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    w.text:SetPoint("RIGHT", -4, 0)
     w.text:SetText("")
 
     w.kind = "bar"
 
     function w:SetSpell(spellID)
-        self.icon:SetTexture(GetSpellIcon(spellID))
+        self.name:SetText(GetSpellName(spellID))
     end
 
     local function OnUpdate(self)
@@ -130,17 +134,42 @@ local function CreateBarWidget(parent)
     end
 
     function w:Trigger(cd)
-        self.bar.duration = cd
-        self.bar.endTime = GetTime() + cd
-        self.bar:SetValue(1)
-        self.bar:SetScript("OnUpdate", OnUpdate)
+        self.duration = cd
+        self.endTime = GetTime() + cd
+        self:SetValue(1)
+        self:SetScript("OnUpdate", OnUpdate)
+    end
+
+    return w
+end
+
+-- ---- composite icon+bar widget -------------------------------------------
+local function CreateBothWidget(parent)
+    local w = CreateFrame("Frame", nil, parent)
+    w:SetSize(ICON_SIZE + 4 + BAR_WIDTH, ICON_SIZE)
+    w.icon = CreateIconWidget(w)
+    w.icon:SetPoint("LEFT")
+    w.bar = CreateBarWidget(w)
+    w.bar:SetPoint("LEFT", w.icon, "RIGHT", 4, 0)
+    w.kind = "both"
+
+    function w:SetSpell(spellID)
+        self.icon:SetSpell(spellID)
+        self.bar:SetSpell(spellID)
+    end
+
+    function w:Trigger(cd)
+        self.icon:Trigger(cd)
+        self.bar:Trigger(cd)
     end
 
     return w
 end
 
 local function CreateWidget(parent)
-    if DisplayMode() == "bars" then return CreateBarWidget(parent) end
+    local mode = DisplayMode()
+    if mode == "bars" then return CreateBarWidget(parent) end
+    if mode == "both" then return CreateBothWidget(parent) end
     return CreateIconWidget(parent)
 end
 
@@ -159,28 +188,28 @@ local function CreateRow(parent)
     return r
 end
 
+local function StacksVertically()
+    local mode = DisplayMode()
+    return mode == "bars" or mode == "both"
+end
+
 local function LayoutWidgets(row)
-    local gap = DisplayMode() == "bars" and 4 or ICON_GAP
+    local stack = StacksVertically()
     for i, w in ipairs(row.widgets) do
         w:ClearAllPoints()
-        local prev = i == 1 and row.name or row.widgets[i - 1]
-        local anchorPoint = i == 1 and "RIGHT" or "RIGHT"
         if i == 1 then
             w:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
+        elseif stack then
+            w:SetPoint("TOPLEFT", row.widgets[i - 1], "BOTTOMLEFT", 0, -2)
         else
-            if DisplayMode() == "bars" then
-                -- Stack bars vertically within the row for readability
-                w:SetPoint("TOPLEFT", row.widgets[i - 1], "BOTTOMLEFT", 0, -2)
-            else
-                w:SetPoint("LEFT", row.widgets[i - 1], "RIGHT", gap, 0)
-            end
+            w:SetPoint("LEFT", row.widgets[i - 1], "RIGHT", ICON_GAP, 0)
         end
         w:Show()
     end
 end
 
 local function RowHeight(nSpells)
-    if DisplayMode() == "bars" and nSpells > 1 then
+    if StacksVertically() and nSpells > 1 then
         return ICON_SIZE + (nSpells - 1) * (ICON_SIZE + 2) + 4
     end
     return ROW_HEIGHT
@@ -199,7 +228,15 @@ local function LayoutRows()
     end
     local totalH = math.max(1, -y + PADDING - 4)
     container:SetHeight(totalH)
-    local w = DisplayMode() == "bars" and (NAME_WIDTH + ICON_SIZE + BAR_WIDTH + PADDING * 2 + 20) or 260
+    local mode = DisplayMode()
+    local w
+    if mode == "bars" then
+        w = NAME_WIDTH + BAR_WIDTH + PADDING * 2 + 20
+    elseif mode == "both" then
+        w = NAME_WIDTH + ICON_SIZE + 4 + BAR_WIDTH + PADDING * 2 + 20
+    else
+        w = 260
+    end
     container:SetWidth(w)
 end
 

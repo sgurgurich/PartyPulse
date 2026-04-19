@@ -82,26 +82,68 @@ end
 
 -- ---- Spell toggles --------------------------------------------------------
 
-local function RegisterSpellToggles(cat, playerClass, playerSpecID)
-    if not playerClass then return end
-    local spells = ns.GetInterruptsFor(playerClass, playerSpecID)
-    if #spells == 0 then return end
+local CLASS_ORDER = {
+    "DEATHKNIGHT", "DEMONHUNTER", "DRUID", "EVOKER", "HUNTER", "MAGE",
+    "MONK", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR",
+}
 
-    for _, s in ipairs(spells) do
-        local key = "spell_" .. s.id
-        if PartyPulseDB[key] == nil then PartyPulseDB[key] = true end
+local function ClassDisplayName(class)
+    local info = LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[class]
+    return info or class
+end
 
-        local info = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(s.id)
-        local displayName = (info and info.name) or ("Spell " .. s.id)
+local function RegisterSpellToggles(cat)
+    local all = ns.AllTrackedSpells()
+    if #all == 0 then return end
 
-        local setting = Settings.RegisterAddOnSetting(
-            cat, "PartyPulse_" .. key, key, PartyPulseDB,
-            Settings.VarType.Boolean, displayName, true
-        )
-        setting:SetValueChangedCallback(function()
-            if ns.RefreshSelf then ns.RefreshSelf() end
-        end)
-        Settings.CreateCheckbox(cat, setting, "Show " .. displayName .. " on your row.")
+    -- Group by owning class (spec-only spells fall under their class via INTERRUPTS lookup).
+    local byClass = {}
+    local function classOf(spellID)
+        for class, list in pairs(ns.INTERRUPTS) do
+            for _, s in ipairs(list) do
+                if s.id == spellID then return class end
+            end
+        end
+        for _, entry in pairs(ns.INTERRUPTS_BY_SPEC) do
+            local source = entry.replace or entry
+            for _, s in ipairs(source) do
+                if s.id == spellID then
+                    -- Spec-only spell: attribute via class default if any spell in the entry matches a class list,
+                    -- otherwise bucket under "OTHER".
+                    return nil
+                end
+            end
+        end
+    end
+    for _, s in ipairs(all) do
+        local class = s.class or classOf(s.id) or "OTHER"
+        byClass[class] = byClass[class] or {}
+        table.insert(byClass[class], s)
+    end
+
+    local order = {}
+    for _, c in ipairs(CLASS_ORDER) do if byClass[c] then order[#order + 1] = c end end
+    if byClass.OTHER then order[#order + 1] = "OTHER" end
+
+    for _, class in ipairs(order) do
+        for _, s in ipairs(byClass[class]) do
+            local key = "spell_" .. s.id
+            if PartyPulseDB[key] == nil then PartyPulseDB[key] = true end
+
+            local info = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(s.id)
+            local spellName = (info and info.name) or ("Spell " .. s.id)
+            local displayName = string.format("[%s] %s", ClassDisplayName(class), spellName)
+
+            local setting = Settings.RegisterAddOnSetting(
+                cat, "PartyPulse_" .. key, key, PartyPulseDB,
+                Settings.VarType.Boolean, displayName, true
+            )
+            setting:SetValueChangedCallback(function()
+                if ns.RefreshAll then ns.RefreshAll() end
+            end)
+            Settings.CreateCheckbox(cat, setting,
+                "Track " .. spellName .. " on your row and on party members.")
+        end
     end
 end
 
@@ -141,6 +183,7 @@ function ns.config.Register()
         local container = Settings.CreateControlTextContainer()
         container:Add("icons", "Icons")
         container:Add("bars",  "Bars")
+        container:Add("both",  "Icons + Bars")
         return container:GetData()
     end
     Settings.CreateDropdown(category, displaySetting, GetDisplayOptions,
@@ -157,11 +200,8 @@ function ns.config.Register()
     Settings.CreateSlider(category, scaleSetting, scaleOptions,
         "Adjust the frame scale. For an exact value, use the Fine-tune subcategory.")
 
-    -- Spell toggles
-    local _, playerClass = UnitClass("player")
-    local specIdx = GetSpecialization and GetSpecialization()
-    local specID = specIdx and GetSpecializationInfo and GetSpecializationInfo(specIdx) or nil
-    RegisterSpellToggles(category, playerClass, specID)
+    -- Spell toggles (every tracked spell across all classes/specs)
+    RegisterSpellToggles(category)
 
     Settings.RegisterAddOnCategory(category)
 
