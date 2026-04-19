@@ -61,6 +61,17 @@ Defaults live in `Config.lua` `DEFAULTS` and are back-filled in `EnsureDefaults(
 
 Test a build without tagging: `gh workflow run release.yml --ref main` will run the packager and upload to CurseForge, but no GitHub Release (and therefore no downloadable zip outside CF) is produced for non-tag runs. To get a local zip from a dispatch run, re-add an `actions/upload-artifact` step temporarily.
 
+## Local install after a release
+
+Stefan's WoW install is at `E:\Blizzard Games\World of Warcraft\_retail_\Interface\addons` (writable, no admin needed). After pushing a tagged release and confirming the workflow run succeeded, install the new build into that folder so the addon is ready in-game:
+
+1. Wait for the release workflow to finish: `gh run watch <run-id>` (or poll `gh run list --workflow=release.yml --limit 1`).
+2. Download the zip from the GitHub Release: `gh release download <tag> -p 'PartyPulse-*.zip' -D /tmp/pp` (use a temp dir).
+3. Remove the existing addon folder: `rm -rf "E:/Blizzard Games/World of Warcraft/_retail_/Interface/addons/PartyPulse"`.
+4. Unzip into the addons directory: `unzip -o /tmp/pp/PartyPulse-*.zip -d "E:/Blizzard Games/World of Warcraft/_retail_/Interface/addons"`.
+
+The packager's zip already contains a top-level `PartyPulse/` folder, so step 4 lands files in the right place. Stefan needs to `/reload` (or relaunch WoW) to pick up the new build.
+
 ## In-game install / testing
 
 1. Extract the packaged zip into `World of Warcraft/_retail_/Interface/AddOns/`. Folder must be named exactly `PartyPulse/` with `PartyPulse.toc` at its root.
