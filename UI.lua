@@ -445,6 +445,31 @@ local TEST_MEMBERS = {
 
 local testTicker
 
+local function EnabledSpellsFor(class)
+    local out = {}
+    for _, s in ipairs(ns.GetInterruptsFor(class, nil)) do
+        if not ns.IsSpellEnabled or ns.IsSpellEnabled(s.id) then
+            out[#out + 1] = s
+        end
+    end
+    return out
+end
+
+local function TestIsActive()
+    return testTicker ~= nil
+end
+
+local function ApplyTestMembers()
+    for _, m in ipairs(TEST_MEMBERS) do
+        local spells = EnabledSpellsFor(m.class)
+        if #spells > 0 then
+            ns.ui.SetMember(m.name, m.class, spells)
+        else
+            ns.ui.RemoveMember(m.name)
+        end
+    end
+end
+
 local function StopTestMode()
     if testTicker then testTicker:Cancel(); testTicker = nil end
     for _, m in ipairs(TEST_MEMBERS) do
@@ -453,16 +478,11 @@ local function StopTestMode()
 end
 
 local function StartTestMode()
-    for _, m in ipairs(TEST_MEMBERS) do
-        local spells = ns.GetInterruptsFor(m.class, nil)
-        if #spells > 0 then
-            ns.ui.SetMember(m.name, m.class, spells)
-        end
-    end
+    ApplyTestMembers()
     if testTicker then testTicker:Cancel() end
     testTicker = C_Timer.NewTicker(2.5, function()
         local m = TEST_MEMBERS[math.random(#TEST_MEMBERS)]
-        local spells = ns.GetInterruptsFor(m.class, nil)
+        local spells = EnabledSpellsFor(m.class)
         if #spells == 0 then return end
         local s = spells[math.random(#spells)]
         ns.ui.TriggerCD(m.name, s.id, s.cd)
@@ -471,6 +491,11 @@ end
 
 function ns.ui.SetTestMode(on)
     if on then StartTestMode() else StopTestMode() end
+end
+
+-- Re-apply test member rows with current spell-enable filter (no ticker churn).
+function ns.ui.RefreshTestMembers()
+    if TestIsActive() then ApplyTestMembers() end
 end
 
 function ns.ui.RebuildAll()

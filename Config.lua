@@ -33,6 +33,15 @@ local function EnsureDefaults()
     for k, v in pairs(DEFAULTS) do
         if PartyPulseDB[k] == nil then PartyPulseDB[k] = v end
     end
+    -- One-time migration: early versions initialized every spell to enabled,
+    -- including ones we've since moved to default-off. Flip them off the first
+    -- time the new default-off list is seen on this character.
+    if not PartyPulseDB._defaultOffMigrated then
+        for id in pairs(SPELL_DEFAULT_OFF) do
+            PartyPulseDB["spell_" .. id] = false
+        end
+        PartyPulseDB._defaultOffMigrated = true
+    end
 end
 
 function ns.config.ApplyAll()

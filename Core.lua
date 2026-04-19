@@ -34,6 +34,7 @@ local function IsSpellEnabled(spellID)
     local v = PartyPulseDB["spell_" .. spellID]
     return v ~= false
 end
+ns.IsSpellEnabled = IsSpellEnabled
 
 local function EnabledSpells()
     local out = {}
@@ -117,6 +118,7 @@ function ns.RefreshAll()
             ns.ui.SetMember(name, m.class, filtered)
         end
     end
+    if ns.ui.RefreshTestMembers then ns.ui.RefreshTestMembers() end
 end
 
 local function HandleMessage(text, sender)

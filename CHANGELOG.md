@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.1
+
+- Test mode now respects the per-spell enable toggles (e.g. disabling Death Grip hides it on TestDK too).
+- One-time migration flips Death Grip to off on characters that had it enabled from earlier versions.
+
 ## v0.4.0
 
 - New "Test mode" toggle simulates 4 party members (Death Knight, Mage, Shaman, Druid) with randomized cooldowns every ~2.5s for previewing layouts.
