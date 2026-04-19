@@ -64,16 +64,25 @@ local function CreateContainer()
         SavePosition(self)
     end)
     RestorePosition(f)
-    if f.SetBackdrop then
-        f:SetBackdrop({
-            bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-            tile = true, tileSize = 16, edgeSize = 12,
-            insets = { left = 3, right = 3, top = 3, bottom = 3 },
-        })
-        f:SetBackdropColor(0, 0, 0, 0.5)
-    end
     return f
+end
+
+local BACKDROP = {
+    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+}
+
+function ns.ui.SetBackdropShown(show)
+    if not container or not container.SetBackdrop then return end
+    if show then
+        container:SetBackdrop(BACKDROP)
+        container:SetBackdropColor(0, 0, 0, 0.5)
+        container:SetBackdropBorderColor(1, 1, 1, 1)
+    else
+        container:SetBackdrop(nil)
+    end
 end
 
 -- ---- icon widget ----------------------------------------------------------
@@ -99,7 +108,7 @@ end
 local function CreateBarWidget(parent)
     local w = CreateFrame("StatusBar", nil, parent)
     w:SetSize(BAR_WIDTH, ICON_SIZE - 6)
-    w:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+    w:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
     w:SetStatusBarColor(0.2, 0.8, 0.2)
     w:SetMinMaxValues(0, 1)
     w:SetValue(0)
@@ -279,7 +288,10 @@ local function ApplyMember(unitName, data)
 end
 
 function ns.ui.Show()
-    if not container then container = CreateContainer() end
+    if not container then
+        container = CreateContainer()
+        ns.ui.SetBackdropShown(PartyPulseDB and PartyPulseDB.showBackdrop)
+    end
     container:Show()
     PartyPulseDB = PartyPulseDB or {}
     PartyPulseDB.shown = true

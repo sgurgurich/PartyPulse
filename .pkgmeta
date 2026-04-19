@@ -7,5 +7,7 @@ manual-changelog:
 ignore:
   - .github
   - .gitignore
+  - .claude
   - README.md
   - LICENSE
+  - CLAUDE.md

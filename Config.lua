@@ -9,6 +9,12 @@ local DEFAULTS = {
     locked = false,
     scale = 1.0,
     displayMode = "icons",
+    showBackdrop = false,
+}
+
+-- Spells whose tracking should default to OFF instead of ON.
+local SPELL_DEFAULT_OFF = {
+    [49576] = true, -- Death Grip
 }
 
 local SCALE_MIN, SCALE_MAX = 0.5, 2.0
@@ -25,6 +31,7 @@ function ns.config.ApplyAll()
     if PartyPulseDB.shown then ns.ui.Show() else ns.ui.Hide() end
     ns.ui.SetLocked(PartyPulseDB.locked)
     ns.ui.SetScale(PartyPulseDB.scale)
+    ns.ui.SetBackdropShown(PartyPulseDB.showBackdrop)
 end
 
 function ns.config.Open()
@@ -128,7 +135,8 @@ local function RegisterSpellToggles(cat)
     for _, class in ipairs(order) do
         for _, s in ipairs(byClass[class]) do
             local key = "spell_" .. s.id
-            if PartyPulseDB[key] == nil then PartyPulseDB[key] = true end
+            local defaultOn = not SPELL_DEFAULT_OFF[s.id]
+            if PartyPulseDB[key] == nil then PartyPulseDB[key] = defaultOn end
 
             local info = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(s.id)
             local spellName = (info and info.name) or ("Spell " .. s.id)
@@ -136,7 +144,7 @@ local function RegisterSpellToggles(cat)
 
             local setting = Settings.RegisterAddOnSetting(
                 cat, "PartyPulse_" .. key, key, PartyPulseDB,
-                Settings.VarType.Boolean, displayName, true
+                Settings.VarType.Boolean, displayName, defaultOn
             )
             setting:SetValueChangedCallback(function()
                 if ns.RefreshAll then ns.RefreshAll() end
@@ -172,6 +180,14 @@ function ns.config.Register()
     )
     lockedSetting:SetValueChangedCallback(function(_, value) ns.ui.SetLocked(value) end)
     Settings.CreateCheckbox(category, lockedSetting, "Prevents the frame from being dragged.")
+
+    -- Backdrop / border
+    local backdropSetting = Settings.RegisterAddOnSetting(
+        category, "PartyPulse_ShowBackdrop", "showBackdrop", PartyPulseDB,
+        Settings.VarType.Boolean, "Show frame background", DEFAULTS.showBackdrop
+    )
+    backdropSetting:SetValueChangedCallback(function(_, value) ns.ui.SetBackdropShown(value) end)
+    Settings.CreateCheckbox(category, backdropSetting, "Show the dark background and border behind the frame.")
 
     -- Display mode dropdown
     local displaySetting = Settings.RegisterAddOnSetting(

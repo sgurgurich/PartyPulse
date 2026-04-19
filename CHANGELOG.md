@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.1
+
+- Death Grip is now off by default in the spell list (still toggleable).
+- New "Show frame background" option (off by default) to hide the dark backdrop and border.
+- Bar texture switched to a clean flat texture.
+- Workflow now attaches the addon zip directly to the GitHub Release on tag pushes.
+- CLAUDE.md is no longer bundled into the addon zip.
+
 ## v0.2.0
 
 - New "Icons + Bars" display mode showing both an icon sweep and a bar per spell.
