@@ -181,6 +181,10 @@ local function AddSliderRow(panel, label, varKey, min, max, step, onChange, tool
         edit:SetText(string.format(fmt, PartyPulseDB[varKey]))
         self:ClearFocus()
     end)
+    edit:SetScript("OnShow", function(self)
+        local v = PartyPulseDB[varKey]
+        if v ~= nil then self:SetText(string.format(fmt, v)) end
+    end)
 
     if tooltip then
         row:EnableMouse(true)

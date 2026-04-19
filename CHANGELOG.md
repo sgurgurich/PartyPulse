@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.1
+
+- Slider editboxes now reliably prepopulate with the current value when a settings panel opens.
+
 ## v0.5.0
 
 - Options menu reorganized into subcategories: Sizing, Text, Colors, Spells. Test mode toggle moved to the top of the main panel.
