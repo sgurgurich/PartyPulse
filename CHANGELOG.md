@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.2
+
+- Spell spacing can now go down to -40 (was -4) for tight or overlapping layouts.
+
 ## v0.6.1
 
 - Row spacing slider can now go negative (-20 to 40) so bars can truly touch or overlap.
