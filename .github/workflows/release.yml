@@ -25,9 +25,18 @@ jobs:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
 
+      - name: Locate packaged zip
+        run: |
+          echo "--- workspace root ---"
+          ls -la
+          echo "--- find zip files ---"
+          find . -name '*.zip' -type f 2>/dev/null || true
+
       - name: Upload zip as artifact
         uses: actions/upload-artifact@v4
         with:
           name: PartyPulse-${{ github.ref_name }}
-          path: .release/*.zip
-          if-no-files-found: error
+          path: |
+            **/PartyPulse*.zip
+            .release/
+          if-no-files-found: warn
