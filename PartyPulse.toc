@@ -4,6 +4,7 @@
 ## Version: 0.1.0
 ## Author: stefan
 ## SavedVariables: PartyPulseDB
+## X-Curse-Project-ID: 1519200
 
 Spells.lua
 Comm.lua
