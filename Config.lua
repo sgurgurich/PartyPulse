@@ -147,6 +147,7 @@ local function AddSliderRow(panel, label, varKey, min, max, step, onChange, tool
     edit:SetSize(60, 20)
     edit:SetAutoFocus(false)
     edit:SetMaxLetters(8)
+    edit:SetTextInsets(4, 4, 2, 2)
 
     local isFloat = step < 1
     local fmt = isFloat and "%.2f" or "%d"
@@ -162,6 +163,7 @@ local function AddSliderRow(panel, label, varKey, min, max, step, onChange, tool
         suppress = true
         slider:SetValue(v)
         edit:SetText(string.format(fmt, v))
+    edit:SetCursorPosition(0)
         suppress = false
         PartyPulseDB[varKey] = v
         if onChange then onChange(v) end
@@ -183,7 +185,11 @@ local function AddSliderRow(panel, label, varKey, min, max, step, onChange, tool
     end)
     edit:SetScript("OnShow", function(self)
         local v = PartyPulseDB[varKey]
-        if v ~= nil then self:SetText(string.format(fmt, v)) end
+        if v ~= nil then
+            self:SetText(string.format(fmt, v))
+            self:SetCursorPosition(0)
+            self:ClearFocus()
+        end
     end)
 
     if tooltip then
@@ -202,6 +208,7 @@ local function AddSliderRow(panel, label, varKey, min, max, step, onChange, tool
         suppress = true
         slider:SetValue(clamp(quant(v)))
         edit:SetText(string.format(fmt, v))
+    edit:SetCursorPosition(0)
         suppress = false
     end
     row:Refresh()
