@@ -25,6 +25,18 @@ local function BarHeight() return (PartyPulseDB and PartyPulseDB.barHeight) or D
 local function SpellGap()  return (PartyPulseDB and PartyPulseDB.spellGap)  or DEFAULT_SPELL_GAP end
 local function NameOffsetX() return (PartyPulseDB and PartyPulseDB.nameOffsetX) or 0 end
 local function NameOffsetY() return (PartyPulseDB and PartyPulseDB.nameOffsetY) or 0 end
+local function RowGap()            return (PartyPulseDB and PartyPulseDB.rowGap) or 4 end
+local function ShowSpellName()     return not (PartyPulseDB and PartyPulseDB.showSpellName == false) end
+local function NameFontSize()      return (PartyPulseDB and PartyPulseDB.nameFontSize) or 12 end
+local function SpellNameFontSize() return (PartyPulseDB and PartyPulseDB.spellNameFontSize) or 11 end
+local function TimeFontSize()      return (PartyPulseDB and PartyPulseDB.timeFontSize) or 11 end
+local function BarUseClassColor()  return not (PartyPulseDB and PartyPulseDB.barUseClassColor == false) end
+
+local function ColorOr(key, dr, dg, db, da)
+    local c = PartyPulseDB and PartyPulseDB[key]
+    if c then return c.r or dr, c.g or dg, c.b or db, c.a or da end
+    return dr, dg, db, da
+end
 
 local function DisplayMode()
     return (PartyPulseDB and PartyPulseDB.displayMode) or "icons"
@@ -98,8 +110,8 @@ function ns.ui.SetBackdropShown(show)
     if not container or not container.SetBackdrop then return end
     if show then
         container:SetBackdrop(BACKDROP)
-        container:SetBackdropColor(0, 0, 0, 0.5)
-        container:SetBackdropBorderColor(1, 1, 1, 1)
+        container:SetBackdropColor(ColorOr("bgColor", 0, 0, 0, 0.5))
+        container:SetBackdropBorderColor(ColorOr("borderColor", 1, 1, 1, 1))
     else
         container:SetBackdrop(nil)
     end
@@ -136,13 +148,19 @@ local function CreateBarWidget(parent)
 
     w.bg = w:CreateTexture(nil, "BACKGROUND")
     w.bg:SetAllPoints()
-    w.bg:SetColorTexture(0, 0, 0, 0.5)
+    w.bg:SetColorTexture(ColorOr("barBgColor", 0, 0, 0, 0.5))
 
+    local fontPath = GameFontHighlightSmall:GetFont()
     w.name = w:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     w.name:SetPoint("LEFT", 4, 0)
+    w.name:SetFont(fontPath, SpellNameFontSize(), "OUTLINE")
+    w.name:SetTextColor(ColorOr("textColor", 1, 1, 1, 1))
+    if not ShowSpellName() then w.name:Hide() end
 
     w.text = w:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     w.text:SetPoint("RIGHT", -4, 0)
+    w.text:SetFont(fontPath, TimeFontSize(), "OUTLINE")
+    w.text:SetTextColor(ColorOr("textColor", 1, 1, 1, 1))
     w.text:SetText("")
 
     w.kind = "bar"
@@ -152,8 +170,12 @@ local function CreateBarWidget(parent)
     end
 
     function w:SetClassColor(class)
-        local c = RAID_CLASS_COLORS[class]
-        if c then self:SetStatusBarColor(c.r, c.g, c.b) end
+        if BarUseClassColor() then
+            local c = RAID_CLASS_COLORS[class]
+            if c then self:SetStatusBarColor(c.r, c.g, c.b) end
+        else
+            self:SetStatusBarColor(ColorOr("barFillColor", 0.2, 0.8, 0.2, 1))
+        end
     end
 
     local function OnUpdate(self)
@@ -222,6 +244,8 @@ local function CreateRow(parent)
     r.name:SetPoint("LEFT", 0, 0)
     r.name:SetWidth(NAME_WIDTH)
     r.name:SetJustifyH("LEFT")
+    local nf = GameFontNormal:GetFont()
+    r.name:SetFont(nf, NameFontSize(), "")
 
     r.widgets = {}
     r.widgetByID = {}
@@ -287,13 +311,15 @@ local function UnitHeight()
 end
 
 local function RowHeight(nSpells)
-    local h = ROW_HEIGHT
+    local h
     if StacksVertically() and nSpells >= 1 then
         local unit = UnitHeight()
-        h = unit + (nSpells - 1) * (unit + SpellGap()) + 4
+        h = unit * nSpells + SpellGap() * (nSpells - 1)
+    else
+        h = UnitHeight()
     end
     if NameAbove() then h = h + NAME_HEIGHT + 2 end
-    return h
+    return math.max(1, h)
 end
 
 local function LayoutRows()
@@ -305,9 +331,9 @@ local function LayoutRows()
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", container, "TOPLEFT", PADDING, y)
         row:SetWidth(container:GetWidth() - PADDING * 2)
-        y = y - h - 4
+        y = y - h - RowGap()
     end
-    local totalH = math.max(1, -y + PADDING - 4)
+    local totalH = math.max(1, -y + PADDING - RowGap())
     container:SetHeight(totalH)
     local mode = DisplayMode()
     local nameOffset = NameInline() and NAME_WIDTH or 0

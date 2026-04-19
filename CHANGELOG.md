@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.0
+
+- Options menu reorganized into subcategories: Sizing, Text, Colors, Spells. Test mode toggle moved to the top of the main panel.
+- Every slider now has an editbox next to it for exact numeric input; the separate "Fine-tune" subcategory has been removed.
+- New color pickers: backdrop background/border, bar background, bar fill override, and text color.
+- New toggle "Use class color for bars" lets you switch between class-colored bars and a custom override color.
+- New sliders: row spacing between members, player-name font size, spell-name font size, countdown font size.
+- New toggle "Show spell name on bars".
+- Spell spacing can now go negative for tighter layouts; extra row padding removed so the value applies cleanly.
+
 ## v0.4.1
 
 - Test mode now respects the per-spell enable toggles (e.g. disabling Death Grip hides it on TestDK too).

@@ -14,11 +14,22 @@ local DEFAULTS = {
     namePosition = "left",
     nameOffsetX = 0,
     nameOffsetY = 0,
+    nameFontSize = 12,
+    showSpellName = true,
+    spellNameFontSize = 11,
+    timeFontSize = 11,
     iconSize = 24,
     barWidth = 140,
     barHeight = 18,
     spellGap = 2,
+    rowGap = 4,
     testMode = false,
+    barUseClassColor = true,
+    bgColor = { r = 0, g = 0, b = 0, a = 0.5 },
+    borderColor = { r = 1, g = 1, b = 1, a = 1 },
+    barBgColor = { r = 0, g = 0, b = 0, a = 0.5 },
+    barFillColor = { r = 0.2, g = 0.8, b = 0.2, a = 1 },
+    textColor = { r = 1, g = 1, b = 1, a = 1 },
 }
 
 -- Spells whose tracking should default to OFF instead of ON.
@@ -26,16 +37,22 @@ local SPELL_DEFAULT_OFF = {
     [49576] = true, -- Death Grip
 }
 
-local SCALE_MIN, SCALE_MAX = 0.5, 2.0
-
 local function EnsureDefaults()
     PartyPulseDB = PartyPulseDB or {}
     for k, v in pairs(DEFAULTS) do
-        if PartyPulseDB[k] == nil then PartyPulseDB[k] = v end
+        if PartyPulseDB[k] == nil then
+            if type(v) == "table" then
+                PartyPulseDB[k] = { r = v.r, g = v.g, b = v.b, a = v.a }
+            else
+                PartyPulseDB[k] = v
+            end
+        elseif type(v) == "table" and type(PartyPulseDB[k]) == "table" then
+            -- backfill any missing color channel
+            for ck, cv in pairs(v) do
+                if PartyPulseDB[k][ck] == nil then PartyPulseDB[k][ck] = cv end
+            end
+        end
     end
-    -- One-time migration: early versions initialized every spell to enabled,
-    -- including ones we've since moved to default-off. Flip them off the first
-    -- time the new default-off list is seen on this character.
     if not PartyPulseDB._defaultOffMigrated then
         for id in pairs(SPELL_DEFAULT_OFF) do
             PartyPulseDB["spell_" .. id] = false
@@ -57,92 +74,386 @@ function ns.config.Open()
     if not category then return end
     if Settings and Settings.OpenToCategory then
         Settings.OpenToCategory(category:GetID())
-    elseif InterfaceOptionsFrame_OpenToCategory then
-        InterfaceOptionsFrame_OpenToCategory(category)
     end
 end
 
--- ---- Fine-tune subcategory (canvas) with numeric EditBoxes ----------------
+-- =========================================================================
+--  Canvas panel helpers
+-- =========================================================================
+-- All subcategories that mix sliders/edit-boxes/dropdowns/color pickers use
+-- a canvas layout. We build custom rows by hand and flow them top-to-bottom.
 
-local function BuildFineTunePanel()
-    local f = CreateFrame("Frame", "PartyPulseFineTunePanel", UIParent)
-    f:SetSize(600, 400)
+local PANEL_PAD_X = 16
+local PANEL_PAD_Y = 16
+local ROW_H       = 28
+local ROW_GAP     = 6
+local LABEL_W     = 170
+local CONTROL_X   = PANEL_PAD_X + LABEL_W + 10
 
-    local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", 16, -16)
-    title:SetText("Fine-tune")
+local function NewPanel(title, parentCategory, subName)
+    local f = CreateFrame("Frame", nil, UIParent)
+    f:SetSize(620, 500)
 
-    local desc = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    desc:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
-    desc:SetText("Type exact values. Press Enter to apply.")
+    local header = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", PANEL_PAD_X, -PANEL_PAD_Y)
+    header:SetText(title)
 
-    -- Scale EditBox
-    local scaleLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    scaleLabel:SetPoint("TOPLEFT", desc, "BOTTOMLEFT", 0, -20)
-    scaleLabel:SetText(string.format("Scale (%.2f to %.2f):", SCALE_MIN, SCALE_MAX))
+    f._cursorY = -PANEL_PAD_Y - 28
+    f._rows = {}
 
-    local scaleEdit = CreateFrame("EditBox", "PartyPulseScaleEdit", f, "InputBoxTemplate")
-    scaleEdit:SetSize(80, 22)
-    scaleEdit:SetPoint("LEFT", scaleLabel, "RIGHT", 20, 0)
-    scaleEdit:SetAutoFocus(false)
-
-    local function ReadScale()
-        scaleEdit:SetText(string.format("%.2f", PartyPulseDB.scale or 1.0))
+    function f:NextY(extra)
+        local y = self._cursorY
+        self._cursorY = self._cursorY - (ROW_H + ROW_GAP) - (extra or 0)
+        return y
     end
 
-    scaleEdit:SetScript("OnShow", ReadScale)
-    scaleEdit:SetScript("OnEditFocusLost", ReadScale)
-    scaleEdit:SetScript("OnEnterPressed", function(self)
-        local v = tonumber(self:GetText())
-        if v then
-            v = math.max(SCALE_MIN, math.min(SCALE_MAX, v))
-            PartyPulseDB.scale = v
-            ns.ui.SetScale(v)
-        end
-        self:ClearFocus()
-        ReadScale()
-    end)
+    function f:AddRow(rowFrame)
+        self._rows[#self._rows + 1] = rowFrame
+        return rowFrame
+    end
 
     return f
 end
 
--- ---- Spell toggles --------------------------------------------------------
+local function RefreshAllPanelRows(panel)
+    if not panel or not panel._rows then return end
+    for _, r in ipairs(panel._rows) do
+        if r.Refresh then r:Refresh() end
+    end
+end
 
+-- ---- Row: label + slider + numeric editbox ------------------------------
+local function AddSliderRow(panel, label, varKey, min, max, step, onChange, tooltip)
+    local row = CreateFrame("Frame", nil, panel)
+    row:SetSize(580, ROW_H)
+    row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY())
+
+    local lbl = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    lbl:SetPoint("LEFT", 0, 0)
+    lbl:SetWidth(LABEL_W)
+    lbl:SetJustifyH("LEFT")
+    lbl:SetText(label)
+
+    local slider = CreateFrame("Slider", nil, row, "UISliderTemplate")
+    slider:SetPoint("LEFT", LABEL_W + 10, 0)
+    slider:SetSize(280, 16)
+    slider:SetOrientation("HORIZONTAL")
+    slider:SetMinMaxValues(min, max)
+    slider:SetValueStep(step)
+    slider:SetObeyStepOnDrag(true)
+
+    local edit = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
+    edit:SetPoint("LEFT", slider, "RIGHT", 20, 0)
+    edit:SetSize(60, 20)
+    edit:SetAutoFocus(false)
+    edit:SetMaxLetters(8)
+
+    local isFloat = step < 1
+    local fmt = isFloat and "%.2f" or "%d"
+    local function clamp(v) return math.max(min, math.min(max, v)) end
+    local function quant(v)
+        if isFloat then return v end
+        return math.floor(v + 0.5)
+    end
+
+    local suppress = false
+    local function setValue(v, fromSlider)
+        v = clamp(quant(v))
+        suppress = true
+        slider:SetValue(v)
+        edit:SetText(string.format(fmt, v))
+        suppress = false
+        PartyPulseDB[varKey] = v
+        if onChange then onChange(v) end
+    end
+
+    slider:SetScript("OnValueChanged", function(_, v)
+        if suppress then return end
+        setValue(v, true)
+    end)
+
+    edit:SetScript("OnEnterPressed", function(self)
+        local v = tonumber(self:GetText())
+        if v then setValue(v) else edit:SetText(string.format(fmt, PartyPulseDB[varKey])) end
+        self:ClearFocus()
+    end)
+    edit:SetScript("OnEscapePressed", function(self)
+        edit:SetText(string.format(fmt, PartyPulseDB[varKey]))
+        self:ClearFocus()
+    end)
+
+    if tooltip then
+        row:EnableMouse(true)
+        row:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+            GameTooltip:Show()
+        end)
+        row:SetScript("OnLeave", GameTooltip_Hide)
+    end
+
+    function row:Refresh()
+        local v = PartyPulseDB[varKey]
+        if v == nil then v = DEFAULTS[varKey] end
+        suppress = true
+        slider:SetValue(clamp(quant(v)))
+        edit:SetText(string.format(fmt, v))
+        suppress = false
+    end
+    row:Refresh()
+
+    panel:AddRow(row)
+    return row
+end
+
+-- ---- Row: label + checkbox ----------------------------------------------
+local function AddCheckRow(panel, label, varKey, onChange, tooltip)
+    local row = CreateFrame("Frame", nil, panel)
+    row:SetSize(580, ROW_H)
+    row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY())
+
+    local cb = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
+    cb:SetPoint("LEFT", 0, 0)
+    cb.text:SetText(label)
+    cb:SetScript("OnClick", function(self)
+        PartyPulseDB[varKey] = self:GetChecked()
+        if onChange then onChange(PartyPulseDB[varKey]) end
+    end)
+    if tooltip then
+        cb:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+            GameTooltip:Show()
+        end)
+        cb:SetScript("OnLeave", GameTooltip_Hide)
+    end
+
+    function row:Refresh()
+        cb:SetChecked(PartyPulseDB[varKey] == true)
+    end
+    row:Refresh()
+
+    panel:AddRow(row)
+    return row
+end
+
+-- ---- Row: label + dropdown ----------------------------------------------
+local function AddDropdownRow(panel, label, varKey, options, onChange)
+    local row = CreateFrame("Frame", nil, panel)
+    row:SetSize(580, ROW_H + 4)
+    row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY(4))
+
+    local lbl = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    lbl:SetPoint("LEFT", 0, 0)
+    lbl:SetWidth(LABEL_W)
+    lbl:SetJustifyH("LEFT")
+    lbl:SetText(label)
+
+    local dd = CreateFrame("DropdownButton", nil, row, "WowStyle1DropdownTemplate")
+    dd:SetPoint("LEFT", LABEL_W + 6, 0)
+    dd:SetWidth(220)
+
+    local function labelFor(value)
+        for _, o in ipairs(options) do if o[1] == value then return o[2] end end
+        return tostring(value)
+    end
+
+    dd:SetupMenu(function(_, rootDescription)
+        for _, opt in ipairs(options) do
+            local v = opt[1]
+            rootDescription:CreateRadio(opt[2],
+                function() return PartyPulseDB[varKey] == v end,
+                function()
+                    PartyPulseDB[varKey] = v
+                    dd:GenerateMenu()
+                    if onChange then onChange(v) end
+                end)
+        end
+    end)
+
+    function row:Refresh()
+        dd:GenerateMenu()
+    end
+    row:Refresh()
+
+    panel:AddRow(row)
+    return row
+end
+
+-- ---- Row: label + color swatch button ----------------------------------
+local function OpenColorPicker(current, hasAlpha, onChange)
+    local r, g, b = current.r, current.g, current.b
+    local a = current.a or 1
+    local info = {
+        r = r, g = g, b = b,
+        opacity = a,
+        hasOpacity = hasAlpha and true or false,
+        swatchFunc = function()
+            local nr, ng, nb = ColorPickerFrame:GetColorRGB()
+            local na = (hasAlpha and ColorPickerFrame.GetColorAlpha) and ColorPickerFrame:GetColorAlpha() or a
+            onChange({ r = nr, g = ng, b = nb, a = na })
+        end,
+        opacityFunc = function()
+            local nr, ng, nb = ColorPickerFrame:GetColorRGB()
+            local na = ColorPickerFrame.GetColorAlpha and ColorPickerFrame:GetColorAlpha() or a
+            onChange({ r = nr, g = ng, b = nb, a = na })
+        end,
+        cancelFunc = function(prev)
+            if prev then onChange({ r = prev.r, g = prev.g, b = prev.b, a = prev.opacity or a }) end
+        end,
+    }
+    ColorPickerFrame:SetupColorPickerAndShow(info)
+end
+
+local function AddColorRow(panel, label, varKey, hasAlpha, onChange, tooltip)
+    local row = CreateFrame("Frame", nil, panel)
+    row:SetSize(580, ROW_H)
+    row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY())
+
+    local lbl = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    lbl:SetPoint("LEFT", 0, 0)
+    lbl:SetWidth(LABEL_W)
+    lbl:SetJustifyH("LEFT")
+    lbl:SetText(label)
+
+    local btn = CreateFrame("Button", nil, row)
+    btn:SetPoint("LEFT", LABEL_W + 10, 0)
+    btn:SetSize(48, 20)
+
+    local bg = btn:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(1, 1, 1, 1)
+
+    local swatch = btn:CreateTexture(nil, "ARTWORK")
+    swatch:SetPoint("TOPLEFT", 1, -1)
+    swatch:SetPoint("BOTTOMRIGHT", -1, 1)
+
+    local border = CreateFrame("Frame", nil, btn, "BackdropTemplate")
+    border:SetAllPoints()
+    if border.SetBackdrop then
+        border:SetBackdrop({
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            edgeSize = 8,
+            insets = { left = 0, right = 0, top = 0, bottom = 0 },
+        })
+    end
+
+    local hint = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    hint:SetPoint("LEFT", btn, "RIGHT", 8, 0)
+    hint:SetText("(click to change)")
+
+    btn:SetScript("OnClick", function()
+        OpenColorPicker(PartyPulseDB[varKey], hasAlpha, function(c)
+            PartyPulseDB[varKey] = c
+            swatch:SetColorTexture(c.r, c.g, c.b, c.a or 1)
+            if onChange then onChange(c) end
+        end)
+    end)
+
+    if tooltip then
+        row:EnableMouse(true)
+        row:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+            GameTooltip:Show()
+        end)
+        row:SetScript("OnLeave", GameTooltip_Hide)
+    end
+
+    function row:Refresh()
+        local c = PartyPulseDB[varKey]
+        if c then swatch:SetColorTexture(c.r, c.g, c.b, c.a or 1) end
+    end
+    row:Refresh()
+
+    panel:AddRow(row)
+    return row
+end
+
+-- =========================================================================
+--  Subcategory panels
+-- =========================================================================
+
+local function BuildMainPanel()
+    local f = NewPanel("PartyPulse", category)
+    AddCheckRow(f, "Test mode", "testMode", function(v) ns.ui.SetTestMode(v) end,
+        "Show 4 simulated party members (DK/Mage/Shaman/Druid) with randomized cooldowns every ~2.5s.")
+    AddCheckRow(f, "Show frame", "shown", function(v)
+        if v then ns.ui.Show() else ns.ui.Hide() end
+    end)
+    AddCheckRow(f, "Lock frame", "locked", function(v) ns.ui.SetLocked(v) end,
+        "Prevents the frame from being dragged.")
+    AddCheckRow(f, "Show frame background", "showBackdrop", function(v) ns.ui.SetBackdropShown(v) end)
+    AddDropdownRow(f, "Display mode", "displayMode", {
+        { "icons", "Icons" }, { "bars", "Bars" }, { "both", "Icons + Bars" },
+    }, function() ns.ui.RebuildAll() end)
+    return f
+end
+
+local function BuildSizingPanel()
+    local f = NewPanel("Sizing", category)
+    AddSliderRow(f, "Scale",        "scale",      0.5,  2.0, 0.05, function(v) ns.ui.SetScale(v) end)
+    AddSliderRow(f, "Icon size",    "iconSize",   8,   64,  1,    function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Bar width",    "barWidth",   40,  320, 1,    function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Bar height",   "barHeight",  4,   40,  1,    function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Spell spacing","spellGap",  -4,   20,  1,    function() ns.ui.RebuildAll() end,
+        "Spacing between cooldowns within a member's row. Can go negative for tighter layouts.")
+    AddSliderRow(f, "Row spacing",  "rowGap",     0,   40,  1,    function() ns.ui.RebuildAll() end,
+        "Spacing between party member rows.")
+    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    return f
+end
+
+local function BuildTextPanel()
+    local f = NewPanel("Text", category)
+    AddCheckRow(f, "Show player name", "showName", function() ns.ui.RebuildAll() end)
+    AddDropdownRow(f, "Player name position", "namePosition", {
+        { "left", "Left of cooldowns" }, { "above", "Above cooldowns" },
+    }, function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Name offset X", "nameOffsetX", -300, 300, 1, function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Name offset Y", "nameOffsetY", -300, 300, 1, function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Name font size", "nameFontSize", 6, 32, 1, function() ns.ui.RebuildAll() end)
+    AddCheckRow(f, "Show spell name on bars", "showSpellName", function() ns.ui.RebuildAll() end,
+        "Toggle whether the spell name is drawn on each bar.")
+    AddSliderRow(f, "Spell name font size", "spellNameFontSize", 6, 32, 1, function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Countdown font size",  "timeFontSize",      6, 32, 1, function() ns.ui.RebuildAll() end)
+    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    return f
+end
+
+local function BuildColorsPanel()
+    local f = NewPanel("Colors", category)
+    AddColorRow(f, "Backdrop background", "bgColor",     true, function() ns.ui.SetBackdropShown(PartyPulseDB.showBackdrop) end)
+    AddColorRow(f, "Backdrop border",     "borderColor", true, function() ns.ui.SetBackdropShown(PartyPulseDB.showBackdrop) end)
+    AddColorRow(f, "Bar background",      "barBgColor",  true, function() ns.ui.RebuildAll() end)
+    AddCheckRow(f, "Use class color for bars", "barUseClassColor", function() ns.ui.RebuildAll() end,
+        "When on, each bar is colored by the cooldown owner's class. When off, uses the bar fill color below.")
+    AddColorRow(f, "Bar fill color (override)", "barFillColor", true, function() ns.ui.RebuildAll() end)
+    AddColorRow(f, "Text color",           "textColor",  true, function() ns.ui.RebuildAll() end,
+        "Applies to the spell name and countdown text on bars. Player name keeps the class color.")
+    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    return f
+end
+
+-- =========================================================================
+--  Spells subcategory (vertical layout via Settings API)
+-- =========================================================================
 local CLASS_ORDER = {
     "DEATHKNIGHT", "DEMONHUNTER", "DRUID", "EVOKER", "HUNTER", "MAGE",
     "MONK", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR",
 }
 
 local function ClassDisplayName(class)
-    local info = LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[class]
-    return info or class
+    return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[class]) or class
 end
 
 local function RegisterSpellToggles(cat)
     local all = ns.AllTrackedSpells()
     if #all == 0 then return end
 
-    -- Group by owning class (spec-only spells fall under their class via INTERRUPTS lookup).
     local byClass = {}
-    local function classOf(spellID)
-        for class, list in pairs(ns.INTERRUPTS) do
-            for _, s in ipairs(list) do
-                if s.id == spellID then return class end
-            end
-        end
-        for _, entry in pairs(ns.INTERRUPTS_BY_SPEC) do
-            local source = entry.replace or entry
-            for _, s in ipairs(source) do
-                if s.id == spellID then
-                    -- Spec-only spell: attribute via class default if any spell in the entry matches a class list,
-                    -- otherwise bucket under "OTHER".
-                    return nil
-                end
-            end
-        end
-    end
     for _, s in ipairs(all) do
-        local class = s.class or classOf(s.id) or "OTHER"
+        local class = s.class or "OTHER"
         byClass[class] = byClass[class] or {}
         table.insert(byClass[class], s)
     end
@@ -174,135 +485,22 @@ local function RegisterSpellToggles(cat)
     end
 end
 
--- ---- Main panel -----------------------------------------------------------
-
+-- =========================================================================
+--  Registration
+-- =========================================================================
 function ns.config.Register()
     EnsureDefaults()
-    if not Settings or not Settings.RegisterVerticalLayoutCategory then return end
+    if not Settings or not Settings.RegisterCanvasLayoutCategory then return end
 
-    category = Settings.RegisterVerticalLayoutCategory("PartyPulse")
-
-    -- Show frame
-    local shownSetting = Settings.RegisterAddOnSetting(
-        category, "PartyPulse_Shown", "shown", PartyPulseDB,
-        Settings.VarType.Boolean, "Show frame", DEFAULTS.shown
-    )
-    shownSetting:SetValueChangedCallback(function(_, value)
-        if value then ns.ui.Show() else ns.ui.Hide() end
-    end)
-    Settings.CreateCheckbox(category, shownSetting, "Show or hide the PartyPulse frame.")
-
-    -- Lock
-    local lockedSetting = Settings.RegisterAddOnSetting(
-        category, "PartyPulse_Locked", "locked", PartyPulseDB,
-        Settings.VarType.Boolean, "Lock frame", DEFAULTS.locked
-    )
-    lockedSetting:SetValueChangedCallback(function(_, value) ns.ui.SetLocked(value) end)
-    Settings.CreateCheckbox(category, lockedSetting, "Prevents the frame from being dragged.")
-
-    -- Backdrop / border
-    local backdropSetting = Settings.RegisterAddOnSetting(
-        category, "PartyPulse_ShowBackdrop", "showBackdrop", PartyPulseDB,
-        Settings.VarType.Boolean, "Show frame background", DEFAULTS.showBackdrop
-    )
-    backdropSetting:SetValueChangedCallback(function(_, value) ns.ui.SetBackdropShown(value) end)
-    Settings.CreateCheckbox(category, backdropSetting, "Show the dark background and border behind the frame.")
-
-    -- Show player name
-    local showNameSetting = Settings.RegisterAddOnSetting(
-        category, "PartyPulse_ShowName", "showName", PartyPulseDB,
-        Settings.VarType.Boolean, "Show player name", DEFAULTS.showName
-    )
-    showNameSetting:SetValueChangedCallback(function() ns.ui.RebuildAll() end)
-    Settings.CreateCheckbox(category, showNameSetting, "Show each party member's name on their row.")
-
-    -- Player name position
-    local namePosSetting = Settings.RegisterAddOnSetting(
-        category, "PartyPulse_NamePosition", "namePosition", PartyPulseDB,
-        Settings.VarType.String, "Player name position", DEFAULTS.namePosition
-    )
-    namePosSetting:SetValueChangedCallback(function() ns.ui.RebuildAll() end)
-    local function GetNamePosOptions()
-        local c = Settings.CreateControlTextContainer()
-        c:Add("left",  "Left of cooldowns")
-        c:Add("above", "Above cooldowns")
-        return c:GetData()
-    end
-    Settings.CreateDropdown(category, namePosSetting, GetNamePosOptions,
-        "Where to place the player name relative to their cooldowns.")
-
-    -- Name offset X / Y
-    local function MakeNameOffsetSlider(varKey, label, tooltip)
-        local setting = Settings.RegisterAddOnSetting(
-            category, "PartyPulse_" .. varKey, varKey, PartyPulseDB,
-            Settings.VarType.Number, label, DEFAULTS[varKey]
-        )
-        setting:SetValueChangedCallback(function() ns.ui.RebuildAll() end)
-        local opts = Settings.CreateSliderOptions(-200, 200, 1)
-        opts:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-        Settings.CreateSlider(category, setting, opts, tooltip)
-    end
-    MakeNameOffsetSlider("nameOffsetX", "Name offset X", "Horizontal offset of the player name.")
-    MakeNameOffsetSlider("nameOffsetY", "Name offset Y", "Vertical offset of the player name.")
-
-    -- Icon / bar sizing + spacing
-    local function MakeSizeSlider(varKey, label, min, max, step, tooltip)
-        local setting = Settings.RegisterAddOnSetting(
-            category, "PartyPulse_" .. varKey, varKey, PartyPulseDB,
-            Settings.VarType.Number, label, DEFAULTS[varKey]
-        )
-        setting:SetValueChangedCallback(function() ns.ui.RebuildAll() end)
-        local opts = Settings.CreateSliderOptions(min, max, step)
-        opts:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-        Settings.CreateSlider(category, setting, opts, tooltip)
-    end
-    MakeSizeSlider("iconSize",  "Icon size",   16, 64,  1, "Width/height of cooldown icons.")
-    MakeSizeSlider("barWidth",  "Bar width",   60, 320, 5, "Width of the bar in Bars and Icons+Bars modes.")
-    MakeSizeSlider("barHeight", "Bar height",   8, 40,  1, "Height of the bar in Bars and Icons+Bars modes.")
-    MakeSizeSlider("spellGap",  "Spell spacing", 0, 20, 1, "Gap between cooldowns within a row.")
-
-    -- Test mode
-    local testSetting = Settings.RegisterAddOnSetting(
-        category, "PartyPulse_TestMode", "testMode", PartyPulseDB,
-        Settings.VarType.Boolean, "Test mode", DEFAULTS.testMode
-    )
-    testSetting:SetValueChangedCallback(function(_, value) ns.ui.SetTestMode(value) end)
-    Settings.CreateCheckbox(category, testSetting,
-        "Show 4 simulated party members (DK/Mage/Shaman/Druid) with randomized cooldowns every ~2.5s.")
-
-    -- Display mode dropdown
-    local displaySetting = Settings.RegisterAddOnSetting(
-        category, "PartyPulse_DisplayMode", "displayMode", PartyPulseDB,
-        Settings.VarType.String, "Display mode", DEFAULTS.displayMode
-    )
-    displaySetting:SetValueChangedCallback(function() ns.ui.RebuildAll() end)
-    local function GetDisplayOptions()
-        local container = Settings.CreateControlTextContainer()
-        container:Add("icons", "Icons")
-        container:Add("bars",  "Bars")
-        container:Add("both",  "Icons + Bars")
-        return container:GetData()
-    end
-    Settings.CreateDropdown(category, displaySetting, GetDisplayOptions,
-        "Show cooldowns as icon sweeps or horizontal bars.")
-
-    -- Scale slider
-    local scaleSetting = Settings.RegisterAddOnSetting(
-        category, "PartyPulse_Scale", "scale", PartyPulseDB,
-        Settings.VarType.Number, "Scale", DEFAULTS.scale
-    )
-    scaleSetting:SetValueChangedCallback(function(_, value) ns.ui.SetScale(value) end)
-    local scaleOptions = Settings.CreateSliderOptions(SCALE_MIN, SCALE_MAX, 0.05)
-    scaleOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-    Settings.CreateSlider(category, scaleSetting, scaleOptions,
-        "Adjust the frame scale. For an exact value, use the Fine-tune subcategory.")
-
-    -- Spell toggles (every tracked spell across all classes/specs)
-    RegisterSpellToggles(category)
-
+    local mainPanel = BuildMainPanel()
+    category = Settings.RegisterCanvasLayoutCategory(mainPanel, "PartyPulse")
+    mainPanel:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     Settings.RegisterAddOnCategory(category)
 
-    -- Fine-tune subcategory (canvas layout for custom EditBoxes)
-    local fineFrame = BuildFineTunePanel()
-    Settings.RegisterCanvasLayoutSubcategory(category, fineFrame, "Fine-tune")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildSizingPanel(), "Sizing")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildTextPanel(),   "Text")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildColorsPanel(), "Colors")
+
+    local spellsCat = Settings.RegisterVerticalLayoutSubcategory(category, "Spells")
+    RegisterSpellToggles(spellsCat)
 end
