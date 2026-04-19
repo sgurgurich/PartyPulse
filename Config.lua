@@ -5,6 +5,7 @@ ns.config = {}
 local categoryID
 
 local DEFAULTS = {
+    shown = true,
     locked = false,
     scale = 1.0,
 }
@@ -18,6 +19,7 @@ end
 
 function ns.config.ApplyAll()
     EnsureDefaults()
+    if PartyPulseDB.shown then ns.ui.Show() else ns.ui.Hide() end
     ns.ui.SetLocked(PartyPulseDB.locked)
     ns.ui.SetScale(PartyPulseDB.scale)
 end
@@ -62,6 +64,20 @@ function ns.config.Register()
 
     local category = Settings.RegisterVerticalLayoutCategory("PartyPulse")
     categoryID = category:GetID()
+
+    local shownSetting = Settings.RegisterAddOnSetting(
+        category,
+        "PartyPulse_Shown",
+        "shown",
+        PartyPulseDB,
+        Settings.VarType.Boolean,
+        "Show frame",
+        true
+    )
+    shownSetting:SetValueChangedCallback(function(_, value)
+        if value then ns.ui.Show() else ns.ui.Hide() end
+    end)
+    Settings.CreateCheckbox(category, shownSetting, "Show or hide the PartyPulse frame.")
 
     local lockedSetting = Settings.RegisterAddOnSetting(
         category,

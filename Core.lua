@@ -156,7 +156,6 @@ frame:SetScript("OnEvent", function(_, event, ...)
         RefreshSpec()
         ns.comm.Init()
         ns.comm.OnReceive(HandleMessage)
-        ns.ui.ApplySavedVisibility()
         ns.config.Register()
         ns.config.ApplyAll()
         EnsureSelfRow()
@@ -187,11 +186,6 @@ end)
 
 SLASH_PARTYPULSE1 = "/pp"
 SLASH_PARTYPULSE2 = "/partypulse"
-SlashCmdList.PARTYPULSE = function(msg)
-    local cmd = (msg or ""):lower():match("^%s*(%S*)")
-    if cmd == "config" or cmd == "options" then
-        ns.config.Open()
-    else
-        ns.ui.Toggle()
-    end
+SlashCmdList.PARTYPULSE = function()
+    ns.config.Open()
 end
