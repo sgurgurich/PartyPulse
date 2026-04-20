@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.12.0
+
+- PartyPulse tab is now an info/about page with logo, a short description, and a credit to theirontip.
+- All settings that used to live on the main tab moved to a new "General" subcategory (Behavior / Frame / Display).
+
 ## v0.11.2
 
 - More breathing room between sections inside settings panels.

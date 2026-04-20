@@ -483,8 +483,40 @@ local function RefreshBackdrop()
     if ns.ui.RefreshBackdrop then ns.ui.RefreshBackdrop() end
 end
 
-local function BuildMainPanel()
-    local f = NewPanel("PartyPulse", category)
+local function BuildInfoPanel()
+    local f = CreateFrame("Frame", nil, UIParent)
+    f:SetSize(620, 720)
+
+    local header = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+    header:SetPoint("TOP", 0, -24)
+    header:SetText("PartyPulse")
+
+    local logo = f:CreateTexture(nil, "ARTWORK")
+    logo:SetTexture("Interface\\AddOns\\PartyPulse\\logo.tga")
+    logo:SetSize(320, 180)
+    logo:SetPoint("TOP", header, "BOTTOM", 0, -16)
+
+    local desc = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    desc:SetPoint("TOP", logo, "BOTTOM", 0, -24)
+    desc:SetWidth(520)
+    desc:SetJustifyH("CENTER")
+    desc:SetSpacing(4)
+    desc:SetText("A Midnight-compatible party interrupt cooldown tracker. "
+        .. "Each client tracks its own casts and broadcasts them over the hidden addon channel, "
+        .. "so every player sees every party member's interrupt and key CDs in real time.\n\n"
+        .. "Configure display, layout, text, and colors in the tabs on the left. "
+        .. "Toggle tracked spells per-class in the Spells tab.")
+
+    local credit = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    credit:SetPoint("BOTTOM", 0, 28)
+    credit:SetJustifyH("CENTER")
+    credit:SetText("Logo and concept by |cffffd100theirontip|r")
+
+    return f
+end
+
+local function BuildGeneralPanel()
+    local f = NewPanel("General", category)
 
     AddSectionHeader(f, "Behavior", 0)
     AddCheckRow(f, "Test mode", "testMode", function(v) ns.ui.SetTestMode(v) end,
@@ -688,11 +720,13 @@ function ns.config.Register()
     EnsureDefaults()
     if not Settings or not Settings.RegisterCanvasLayoutCategory then return end
 
-    local mainPanel = BuildMainPanel()
-    category = Settings.RegisterCanvasLayoutCategory(mainPanel, "PartyPulse")
-    mainPanel:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    local infoPanel = BuildInfoPanel()
+    category = Settings.RegisterCanvasLayoutCategory(infoPanel, "PartyPulse")
     Settings.RegisterAddOnCategory(category)
 
+    local generalPanel = BuildGeneralPanel()
+    generalPanel:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    Settings.RegisterCanvasLayoutSubcategory(category, generalPanel, "General")
     Settings.RegisterCanvasLayoutSubcategory(category, BuildLayoutPanel(), "Layout")
     Settings.RegisterCanvasLayoutSubcategory(category, BuildTextPanel(),   "Text")
     Settings.RegisterCanvasLayoutSubcategory(category, BuildColorsPanel(), "Colors")
