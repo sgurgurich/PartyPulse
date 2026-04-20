@@ -55,6 +55,14 @@ local function ColorOr(key, dr, dg, db, da)
     return dr, dg, db, da
 end
 
+local CLASS_COLOR_OVERRIDES = {
+    DEATHKNIGHT = { r = 139/255, g = 26/255, b = 30/255 },
+}
+
+local function GetClassColor(class)
+    return CLASS_COLOR_OVERRIDES[class] or RAID_CLASS_COLORS[class]
+end
+
 local function DisplayMode()
     return (PartyPulseDB and PartyPulseDB.displayMode) or "icons"
 end
@@ -217,7 +225,7 @@ local function CreateBarWidget(parent)
 
     local function applyCooldownColor(self)
         if BarUseClassColor() and self._class then
-            local c = RAID_CLASS_COLORS[self._class]
+            local c = GetClassColor(self._class)
             if c then self:SetStatusBarColor(c.r, c.g, c.b) return end
         end
         self:SetStatusBarColor(ColorOr("barFillColor", 1/255, 5/255, 30/255, 1))
@@ -225,7 +233,7 @@ local function CreateBarWidget(parent)
 
     local function applyReadyColor(self)
         if BarReadyUseClassColor() and self._class then
-            local c = RAID_CLASS_COLORS[self._class]
+            local c = GetClassColor(self._class)
             if c then self:SetStatusBarColor(c.r, c.g, c.b) return end
         end
         self:SetStatusBarColor(ColorOr("barReadyColor", 0.2, 0.8, 0.2, 1))
@@ -513,7 +521,7 @@ local function ApplyMember(unitName, data)
         rowOrder[#rowOrder + 1] = unitName
     end
 
-    local color = RAID_CLASS_COLORS[data.class] or { r = 1, g = 1, b = 1 }
+    local color = GetClassColor(data.class) or { r = 1, g = 1, b = 1 }
     local short = unitName:match("^[^-]+") or unitName
     row.name:SetText(short)
     row.name:SetTextColor(color.r, color.g, color.b)
