@@ -49,6 +49,8 @@ local DEFAULTS = {
     iconOrientation = "vertical",
     sortOrder = "standard",
     playerAnchor = "front",
+    bgPadding = 10,
+    bgBorderSize = 12,
 }
 
 -- Spells whose tracking should default to OFF instead of ON.
@@ -111,7 +113,7 @@ local CONTROL_X   = PANEL_PAD_X + LABEL_W + 10
 
 local function NewPanel(title, parentCategory, subName)
     local f = CreateFrame("Frame", nil, UIParent)
-    f:SetSize(620, 500)
+    f:SetSize(620, 720)
 
     local header = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", PANEL_PAD_X, -PANEL_PAD_Y)
@@ -132,6 +134,24 @@ local function NewPanel(title, parentCategory, subName)
     end
 
     return f
+end
+
+-- ---- Section header (not a row — no refresh, no DB binding) --------------
+local function AddSectionHeader(panel, title, extraTopGap)
+    local topGap = extraTopGap or 8
+    panel._cursorY = panel._cursorY - topGap
+
+    local lbl = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    lbl:SetPoint("TOPLEFT", PANEL_PAD_X, panel._cursorY)
+    lbl:SetText(title)
+
+    local line = panel:CreateTexture(nil, "ARTWORK")
+    line:SetColorTexture(1, 0.82, 0, 0.35)
+    line:SetHeight(1)
+    line:SetPoint("LEFT",  panel, "TOPLEFT", PANEL_PAD_X,       panel._cursorY - 22)
+    line:SetPoint("RIGHT", panel, "TOPLEFT", PANEL_PAD_X + 580, panel._cursorY - 22)
+
+    panel._cursorY = panel._cursorY - 30
 end
 
 local function RefreshAllPanelRows(panel)
@@ -459,16 +479,26 @@ end
 --  Subcategory panels
 -- =========================================================================
 
+local function RefreshBackdrop()
+    if ns.ui.RefreshBackdrop then ns.ui.RefreshBackdrop() end
+end
+
 local function BuildMainPanel()
     local f = NewPanel("PartyPulse", category)
+
+    AddSectionHeader(f, "Behavior", 0)
     AddCheckRow(f, "Test mode", "testMode", function(v) ns.ui.SetTestMode(v) end,
         "Show 4 simulated party members (DK/Mage/Shaman/Druid) with randomized cooldowns every ~2.5s.")
+
+    AddSectionHeader(f, "Frame")
     AddCheckRow(f, "Show frame", "shown", function(v)
         if v then ns.ui.Show() else ns.ui.Hide() end
     end)
     AddCheckRow(f, "Lock frame", "locked", function(v) ns.ui.SetLocked(v) end,
         "Prevents the frame from being dragged.")
-    AddCheckRow(f, "Show frame background", "showBackdrop", function(v) ns.ui.SetBackdropShown(v) end)
+    AddSliderRow(f, "Scale", "scale", 0.5, 2.0, 0.05, function(v) ns.ui.SetScale(v) end)
+
+    AddSectionHeader(f, "Display")
     AddDropdownRow(f, "Display mode", "displayMode", {
         { "icons", "Icons" }, { "bars", "Bars" }, { "both", "Icons + Bars" },
     }, function() ns.ui.RebuildAll() end)
@@ -481,71 +511,101 @@ local function BuildMainPanel()
         { "front", "Always in front" },
         { "back",  "Always in back" },
     }, function() ns.ui.RebuildAll() end)
+
     return f
 end
 
-local function BuildSizingPanel()
-    local f = NewPanel("Sizing", category)
-    AddSliderRow(f, "Scale",        "scale",      0.5,  2.0, 0.05, function(v) ns.ui.SetScale(v) end)
-    AddSliderRow(f, "Icon size",    "iconSize",   8,   64,  1,    function() ns.ui.RebuildAll() end)
-    AddSliderRow(f, "Bar width",    "barWidth",   40,  320, 1,    function() ns.ui.RebuildAll() end)
-    AddSliderRow(f, "Bar height",   "barHeight",  4,   40,  1,    function() ns.ui.RebuildAll() end)
-    AddSliderRow(f, "Spell spacing (for 2+ kick specs)","spellGap", -40,   20,  1,    function() ns.ui.RebuildAll() end,
+local function BuildLayoutPanel()
+    local f = NewPanel("Layout", category)
+
+    AddSectionHeader(f, "Widget sizes", 0)
+    AddSliderRow(f, "Icon size",  "iconSize",  8,  64,  1, function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Bar width",  "barWidth",  40, 320, 1, function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Bar height", "barHeight", 4,  40,  1, function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Icon border thickness", "iconBorderThickness", 0, 6, 1, function() ns.ui.RebuildAll() end)
+
+    AddSectionHeader(f, "Spacing")
+    AddSliderRow(f, "Spell spacing (for 2+ kick specs)", "spellGap", -40, 20, 1, function() ns.ui.RebuildAll() end,
         "Spacing between cooldowns within a member's row. Can go negative for tighter or overlapping layouts.")
-    AddSliderRow(f, "Row spacing",  "rowGap",    -20,  40,  1,    function() ns.ui.RebuildAll() end,
+    AddSliderRow(f, "Row spacing", "rowGap", -20, 40, 1, function() ns.ui.RebuildAll() end,
         "Spacing between party member rows. Can go negative to make bars touch or overlap.")
+
+    AddSectionHeader(f, "Cooldown offset")
     AddSliderRow(f, "Cooldown offset X", "widgetOffsetX", -300, 400, 1, function() ns.ui.RebuildAll() end,
         "Horizontal offset of the icon/bar block from the row's left edge. Independent of the player-name offset.")
     AddSliderRow(f, "Cooldown offset Y", "widgetOffsetY", -200, 200, 1, function() ns.ui.RebuildAll() end,
         "Vertical offset of the icon/bar block. Independent of the player-name offset.")
-    AddSliderRow(f, "Icon border thickness", "iconBorderThickness", 0, 6, 1, function() ns.ui.RebuildAll() end)
-    AddDropdownRow(f, "Icon orientation (Icons mode)", "iconOrientation", {
+
+    AddSectionHeader(f, "Icons mode")
+    AddDropdownRow(f, "Icon orientation", "iconOrientation", {
         { "vertical",   "Vertical"   },
         { "horizontal", "Horizontal" },
     }, function() ns.ui.RebuildAll() end)
-    AddSliderRow(f, "Icon-to-bar gap (Icons + Bars)", "iconBarGap", -40, 40, 1, function() ns.ui.RebuildAll() end,
+
+    AddSectionHeader(f, "Icons + Bars mode")
+    AddSliderRow(f, "Icon-to-bar gap", "iconBarGap", -40, 40, 1, function() ns.ui.RebuildAll() end,
         "Horizontal gap between an icon and its bar in \"Icons + Bars\" mode.")
-    AddSliderRow(f, "Icon-to-bar Y offset (Icons + Bars)", "iconBarOffsetY", -40, 40, 1, function() ns.ui.RebuildAll() end,
+    AddSliderRow(f, "Icon-to-bar Y offset", "iconBarOffsetY", -40, 40, 1, function() ns.ui.RebuildAll() end,
         "Vertical offset of the bar relative to its icon in \"Icons + Bars\" mode.")
+
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     return f
 end
 
 local function BuildTextPanel()
     local f = NewPanel("Text", category)
+
+    AddSectionHeader(f, "Player name", 0)
     AddCheckRow(f, "Show player name", "showName", function() ns.ui.RebuildAll() end)
     AddDropdownRow(f, "Player name position", "namePosition", {
         { "left", "Left of cooldowns" }, { "above", "Above cooldowns" },
     }, function() ns.ui.RebuildAll() end)
-    AddSliderRow(f, "Name offset X", "nameOffsetX", -300, 300, 1, function() ns.ui.RebuildAll() end)
-    AddSliderRow(f, "Name offset Y", "nameOffsetY", -300, 300, 1, function() ns.ui.RebuildAll() end)
-    AddSliderRow(f, "Name font size", "nameFontSize", 6, 32, 1, function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Name offset X",  "nameOffsetX",  -300, 300, 1, function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Name offset Y",  "nameOffsetY",  -300, 300, 1, function() ns.ui.RebuildAll() end)
+    AddSliderRow(f, "Name font size", "nameFontSize",    6,  32, 1, function() ns.ui.RebuildAll() end)
+
+    AddSectionHeader(f, "Spell name")
     AddCheckRow(f, "Show spell name on bars", "showSpellName", function() ns.ui.RebuildAll() end,
         "Toggle whether the spell name is drawn on each bar.")
     AddSliderRow(f, "Spell name font size", "spellNameFontSize", 6, 32, 1, function() ns.ui.RebuildAll() end)
-    AddSliderRow(f, "Countdown font size",  "timeFontSize",      6, 32, 1, function() ns.ui.RebuildAll() end)
+
+    AddSectionHeader(f, "Countdown")
+    AddCheckRow(f, "Show cooldown countdown text", "showCooldownText", function() ns.ui.RebuildAll() end,
+        "Shows the remaining seconds on both icons and bars. Turn off to hide the countdown text.")
     AddDropdownRow(f, "Countdown format", "cooldownFormat", {
         { "%.1f",  "5.3"  },
         { "%d",    "5"    },
         { "%.1fs", "5.3s" },
         { "%ds",   "5s"   },
     }, function() ns.ui.RebuildAll() end)
-    AddCheckRow(f, "Show cooldown countdown text", "showCooldownText", function() ns.ui.RebuildAll() end,
-        "Shows the remaining seconds on both icons and bars. Turn off to hide the countdown text.")
+    AddSliderRow(f, "Countdown font size", "timeFontSize", 6, 32, 1, function() ns.ui.RebuildAll() end)
+
+    AddSectionHeader(f, "Ready state")
     AddCheckRow(f, "Show \"Ready\" text when off cooldown", "showReadyText", function() ns.ui.RebuildAll() end)
     AddTextInputRow(f, "Ready text", "readyText", function() ns.ui.RebuildAll() end,
         "Shown inside the bar when the spell is off cooldown.")
     AddCheckRow(f, "Show player name when Ready", "showPlayerNameWhenReady", function() ns.ui.RebuildAll() end,
         "When on, bars display the player's name instead of the spell name while the spell is off cooldown.")
+
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     return f
 end
 
 local function BuildColorsPanel()
     local f = NewPanel("Colors", category)
-    AddColorRow(f, "Backdrop background", "bgColor",     true, function() ns.ui.SetBackdropShown(PartyPulseDB.showBackdrop) end)
-    AddColorRow(f, "Backdrop border",     "borderColor", true, function() ns.ui.SetBackdropShown(PartyPulseDB.showBackdrop) end)
-    AddColorRow(f, "Bar background",      "barBgColor",  true, function() ns.ui.RebuildAll() end)
+
+    AddSectionHeader(f, "Frame background", 0)
+    AddCheckRow(f, "Show frame background", "showBackdrop", function(v) ns.ui.SetBackdropShown(v) end)
+    AddColorRow(f, "Background color", "bgColor", true, RefreshBackdrop,
+        "Color and transparency of the frame's background fill.")
+    AddColorRow(f, "Border color", "borderColor", true, RefreshBackdrop)
+    AddSliderRow(f, "Border thickness", "bgBorderSize", 0, 32, 1, RefreshBackdrop,
+        "Thickness of the frame border. 0 hides the border.")
+    AddSliderRow(f, "Padding", "bgPadding", 0, 40, 1, function() ns.ui.RebuildAll() end,
+        "Inner padding between the frame border and the rows.")
+
+    AddSectionHeader(f, "Bars")
+    AddColorRow(f, "Bar background", "barBgColor", true, function() ns.ui.RebuildAll() end)
     AddCheckRow(f, "On-cooldown uses class color", "barUseClassColor", function() ns.ui.RebuildAll() end,
         "When on, the on-cooldown fill is the owner's class color. When off, uses the override below.")
     AddColorRow(f, "Bar on-cooldown color (override)", "barFillColor", true, function() ns.ui.RebuildAll() end,
@@ -554,14 +614,19 @@ local function BuildColorsPanel()
         "When on, the ready-state fill is the owner's class color. When off, uses the override below.")
     AddColorRow(f, "Bar ready color (override)", "barReadyColor", true, function() ns.ui.RebuildAll() end,
         "Used when \"Ready uses class color\" is off.")
-    AddCheckRow(f, "Show icon border", "iconBorderShown", function() ns.ui.RebuildAll() end)
-    AddColorRow(f, "Icon border color", "iconBorderColor", true, function() ns.ui.RebuildAll() end)
     AddCheckRow(f, "Invert bar direction", "barInvert", function() ns.ui.RebuildAll() end,
         "When on, bars fill from empty to full as the cooldown progresses instead of draining.")
-    AddColorRow(f, "Text color",           "textColor",  true, function() ns.ui.RebuildAll() end,
+
+    AddSectionHeader(f, "Icons")
+    AddCheckRow(f, "Show icon border", "iconBorderShown", function() ns.ui.RebuildAll() end)
+    AddColorRow(f, "Icon border color", "iconBorderColor", true, function() ns.ui.RebuildAll() end)
+
+    AddSectionHeader(f, "Text")
+    AddColorRow(f, "Text color", "textColor", true, function() ns.ui.RebuildAll() end,
         "Applies to the spell name and countdown text on bars. Player name keeps the class color.")
-    AddColorRow(f, "Ready text color",     "readyTextColor", true, function() ns.ui.RebuildAll() end,
+    AddColorRow(f, "Ready text color", "readyTextColor", true, function() ns.ui.RebuildAll() end,
         "Color of the \"Ready\" text shown inside bars when a spell is off cooldown.")
+
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     return f
 end
@@ -628,7 +693,7 @@ function ns.config.Register()
     mainPanel:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     Settings.RegisterAddOnCategory(category)
 
-    Settings.RegisterCanvasLayoutSubcategory(category, BuildSizingPanel(), "Sizing")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildLayoutPanel(), "Layout")
     Settings.RegisterCanvasLayoutSubcategory(category, BuildTextPanel(),   "Text")
     Settings.RegisterCanvasLayoutSubcategory(category, BuildColorsPanel(), "Colors")
 

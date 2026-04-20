@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.11.0
+
+- New frame background controls (Colors panel → Frame background section): border thickness (0 hides the border) and inner padding sliders, plus the existing color/transparency pickers.
+- "Show frame background" toggle moved from the main panel into the Colors panel alongside its related options.
+- Settings reorganized with section headers within each panel. Main panel grouped into Behavior / Frame / Display; Sizing renamed to Layout and grouped into Widget sizes / Spacing / Cooldown offset / Icons mode / Icons + Bars mode; Text grouped into Player name / Spell name / Countdown / Ready state; Colors grouped into Frame background / Bars / Icons / Text.
+
 ## v0.10.0
 
 - New "Icon orientation" (Sizing panel) toggles between vertical (default) and horizontal stacking for the Icons-only display mode. Does not apply to Icons + Bars.

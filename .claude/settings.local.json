@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git fetch *)",
+      "Bash(git push *)",
+      "Bash(git tag *)",
+      "Bash(mkdir -p /tmp/pp)",
+      "Bash(rm -f /tmp/pp/PartyPulse-*.zip)",
+      "Bash(gh release *)",
+      "Read(//tmp/**)",
+      "Bash(rm -rf /tmp/pp)",
+      "Bash(git restore *)",
+      "Bash(rm -rf '/e/Blizzard Games/World of Warcraft/_retail_/Interface/addons/PartyPulse')",
+      "Bash(unzip -oq /tmp/pp/PartyPulse-v0.2.1.zip -d '/e/Blizzard Games/World of Warcraft/_retail_/Interface/addons')",
+      "Bash(rm -rf \"E:/Blizzard Games/World of Warcraft/_retail_/Interface/addons/PartyPulse\")",
+      "Bash(unzip -o /tmp/pp/PartyPulse-v0.5.0.zip -d \"E:/Blizzard Games/World of Warcraft/_retail_/Interface/addons\")",
+      "Bash(unzip -o /tmp/pp/PartyPulse-v0.5.1.zip -d \"E:/Blizzard Games/World of Warcraft/_retail_/Interface/addons\")"
+    ]
+  }
+}

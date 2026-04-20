@@ -11,7 +11,8 @@ local memberData = {} -- name -> { class = ..., spells = {{id,cd},...}, active =
 
 local ROW_HEIGHT = 28
 local NAME_WIDTH = 90
-local PADDING = 10
+local function Padding()      return (PartyPulseDB and PartyPulseDB.bgPadding) or 10 end
+local function BgBorderSize() return (PartyPulseDB and PartyPulseDB.bgBorderSize) or 12 end
 
 -- Tunable sizes live in saved variables; these are the defaults / fallbacks.
 local DEFAULT_ICON_SIZE = 24
@@ -115,22 +116,31 @@ local function CreateContainer()
     return f
 end
 
-local BACKDROP = {
-    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true, tileSize = 16, edgeSize = 12,
-    insets = { left = 3, right = 3, top = 3, bottom = 3 },
-}
+local function BuildBackdrop()
+    local edge = BgBorderSize()
+    local hasEdge = edge > 0
+    local inset = hasEdge and math.min(4, math.max(1, math.floor(edge / 3))) or 0
+    return {
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = hasEdge and "Interface\\Tooltips\\UI-Tooltip-Border" or nil,
+        tile = true, tileSize = 16, edgeSize = hasEdge and edge or 1,
+        insets = { left = inset, right = inset, top = inset, bottom = inset },
+    }
+end
 
 function ns.ui.SetBackdropShown(show)
     if not container or not container.SetBackdrop then return end
     if show then
-        container:SetBackdrop(BACKDROP)
+        container:SetBackdrop(BuildBackdrop())
         container:SetBackdropColor(ColorOr("bgColor", 0, 0, 0, 0.5))
         container:SetBackdropBorderColor(ColorOr("borderColor", 1, 1, 1, 1))
     else
         container:SetBackdrop(nil)
     end
+end
+
+function ns.ui.RefreshBackdrop()
+    ns.ui.SetBackdropShown(PartyPulseDB and PartyPulseDB.showBackdrop)
 end
 
 -- ---- icon widget ----------------------------------------------------------
@@ -465,30 +475,30 @@ end
 
 local function LayoutRows()
     SortRows()
-    local y = -PADDING
+    local y = -Padding()
     for _, name in ipairs(rowOrder) do
         local row = rows[name]
         local h = RowHeight(#row.widgets)
         row:SetHeight(h)
         row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", container, "TOPLEFT", PADDING, y)
-        row:SetWidth(container:GetWidth() - PADDING * 2)
+        row:SetPoint("TOPLEFT", container, "TOPLEFT", Padding(), y)
+        row:SetWidth(container:GetWidth() - Padding() * 2)
         y = y - h - RowGap()
     end
-    local totalH = math.max(1, -y + PADDING - RowGap())
+    local totalH = math.max(1, -y + Padding() - RowGap())
     container:SetHeight(totalH)
     local mode = DisplayMode()
     local ox = math.max(0, WidgetOffsetX())
     local w
     if mode == "bars" then
-        w = ox + BarWidth() + PADDING * 2 + 20
+        w = ox + BarWidth() + Padding() * 2 + 20
     elseif mode == "both" then
-        w = ox + IconSize() + math.max(0, IconBarGap()) + BarWidth() + PADDING * 2 + 20
+        w = ox + IconSize() + math.max(0, IconBarGap()) + BarWidth() + Padding() * 2 + 20
     else
         if IconOrientation() == "vertical" then
-            w = ox + IconSize() + PADDING * 2 + 20
+            w = ox + IconSize() + Padding() * 2 + 20
         else
-            w = ox + 6 * IconSize() + PADDING * 2 + 20
+            w = ox + 6 * IconSize() + Padding() * 2 + 20
         end
     end
     container:SetWidth(w)
