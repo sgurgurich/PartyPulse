@@ -55,13 +55,17 @@ local function ColorOr(key, dr, dg, db, da)
     return dr, dg, db, da
 end
 
-local CLASS_COLOR_OVERRIDES = {
+local CLASS_COLOR_DEFAULTS = {
     DEATHKNIGHT = { r = 139/255, g = 26/255, b = 30/255 },
 }
+ns.CLASS_COLOR_DEFAULTS = CLASS_COLOR_DEFAULTS
 
 local function GetClassColor(class)
-    return CLASS_COLOR_OVERRIDES[class] or RAID_CLASS_COLORS[class]
+    local overrides = PartyPulseDB and PartyPulseDB.classColorOverrides
+    if overrides and overrides[class] then return overrides[class] end
+    return CLASS_COLOR_DEFAULTS[class] or RAID_CLASS_COLORS[class]
 end
+ns.GetClassColor = GetClassColor
 
 local function DisplayMode()
     return (PartyPulseDB and PartyPulseDB.displayMode) or "icons"

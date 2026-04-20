@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.15.0
+
+- New "Class Colors" subcategory: override the color used for any class individually. Each row has a color picker and a Reset button that restores the PartyPulse default (deeper crimson for Death Knight) or Blizzard default.
+
 ## v0.14.1
 
 - Death Knight class color now uses a deeper crimson (#8B1A1E) instead of the brighter Blizzard default. Applies to names, bars, and icon colors.

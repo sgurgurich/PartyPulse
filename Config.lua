@@ -51,6 +51,7 @@ local DEFAULTS = {
     playerAnchor = "front",
     bgPadding = 10,
     bgBorderSize = 12,
+    classColorOverrides = {},
 }
 
 -- Spells whose tracking should default to OFF instead of ON.
@@ -475,6 +476,85 @@ local function AddColorRow(panel, label, varKey, hasAlpha, onChange, tooltip)
     return row
 end
 
+local CLASS_ORDER = {
+    "DEATHKNIGHT", "DEMONHUNTER", "DRUID", "EVOKER", "HUNTER", "MAGE",
+    "MONK", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR",
+}
+
+local function ClassDisplayName(class)
+    return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[class]) or class
+end
+
+-- ---- Row: class color swatch with reset button --------------------------
+local function CurrentClassColor(class)
+    local ov = PartyPulseDB.classColorOverrides and PartyPulseDB.classColorOverrides[class]
+    if ov then return ov end
+    if ns.CLASS_COLOR_DEFAULTS and ns.CLASS_COLOR_DEFAULTS[class] then
+        return ns.CLASS_COLOR_DEFAULTS[class]
+    end
+    local c = RAID_CLASS_COLORS[class]
+    if c then return { r = c.r, g = c.g, b = c.b, a = 1 } end
+    return { r = 1, g = 1, b = 1, a = 1 }
+end
+
+local function AddClassColorRow(panel, class, onChange)
+    local row = CreateFrame("Frame", nil, panel)
+    row:SetSize(580, ROW_H)
+    row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY())
+
+    local c = RAID_CLASS_COLORS[class]
+    local hex = c and string.format("ff%02x%02x%02x", c.r*255, c.g*255, c.b*255) or "ffffffff"
+    local lbl = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    lbl:SetPoint("LEFT", 0, 0)
+    lbl:SetWidth(LABEL_W)
+    lbl:SetJustifyH("LEFT")
+    lbl:SetText(string.format("|c%s%s|r", hex, ClassDisplayName and ClassDisplayName(class) or class))
+
+    local btn = CreateFrame("Button", nil, row)
+    btn:SetPoint("LEFT", LABEL_W + 10, 0)
+    btn:SetSize(48, 20)
+
+    local bg = btn:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(1, 1, 1, 1)
+
+    local swatch = btn:CreateTexture(nil, "ARTWORK")
+    swatch:SetPoint("TOPLEFT", 1, -1)
+    swatch:SetPoint("BOTTOMRIGHT", -1, 1)
+
+    local function paint()
+        local cur = CurrentClassColor(class)
+        swatch:SetColorTexture(cur.r, cur.g, cur.b, 1)
+    end
+    paint()
+
+    btn:SetScript("OnClick", function()
+        local cur = CurrentClassColor(class)
+        OpenColorPicker({ r = cur.r, g = cur.g, b = cur.b, a = 1 }, false, function(nc)
+            PartyPulseDB.classColorOverrides = PartyPulseDB.classColorOverrides or {}
+            PartyPulseDB.classColorOverrides[class] = { r = nc.r, g = nc.g, b = nc.b }
+            paint()
+            if onChange then onChange() end
+        end)
+    end)
+
+    local reset = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+    reset:SetPoint("LEFT", btn, "RIGHT", 10, 0)
+    reset:SetSize(80, 22)
+    reset:SetText("Reset")
+    reset:SetScript("OnClick", function()
+        if PartyPulseDB.classColorOverrides then
+            PartyPulseDB.classColorOverrides[class] = nil
+        end
+        paint()
+        if onChange then onChange() end
+    end)
+
+    function row:Refresh() paint() end
+    panel:AddRow(row)
+    return row
+end
+
 -- =========================================================================
 --  Subcategory panels
 -- =========================================================================
@@ -663,18 +743,21 @@ local function BuildColorsPanel()
     return f
 end
 
+local function BuildClassColorsPanel()
+    local f = NewPanel("Class Colors", category)
+
+    AddSectionHeader(f, "Per-class color overrides", 0)
+    for _, class in ipairs(CLASS_ORDER) do
+        AddClassColorRow(f, class, function() ns.ui.RebuildAll() end)
+    end
+
+    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    return f
+end
+
 -- =========================================================================
 --  Spells subcategory (vertical layout via Settings API)
 -- =========================================================================
-local CLASS_ORDER = {
-    "DEATHKNIGHT", "DEMONHUNTER", "DRUID", "EVOKER", "HUNTER", "MAGE",
-    "MONK", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR",
-}
-
-local function ClassDisplayName(class)
-    return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[class]) or class
-end
-
 local function RegisterSpellToggles(cat)
     local all = ns.AllTrackedSpells()
     if #all == 0 then return end
@@ -727,9 +810,10 @@ function ns.config.Register()
     local generalPanel = BuildGeneralPanel()
     generalPanel:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     Settings.RegisterCanvasLayoutSubcategory(category, generalPanel, "General")
-    Settings.RegisterCanvasLayoutSubcategory(category, BuildLayoutPanel(), "Layout")
-    Settings.RegisterCanvasLayoutSubcategory(category, BuildTextPanel(),   "Text")
-    Settings.RegisterCanvasLayoutSubcategory(category, BuildColorsPanel(), "Colors")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildLayoutPanel(),      "Layout")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildTextPanel(),        "Text")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildColorsPanel(),      "Colors")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildClassColorsPanel(), "Class Colors")
 
     local spellsCat = Settings.RegisterVerticalLayoutSubcategory(category, "Spells")
     RegisterSpellToggles(spellsCat)
