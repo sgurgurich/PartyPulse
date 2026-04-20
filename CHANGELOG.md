@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.12.1
+
+- Added the logo asset to the addon so the about page renders the image.
+
 ## v0.12.0
 
 - PartyPulse tab is now an info/about page with logo, a short description, and a credit to theirontip.
