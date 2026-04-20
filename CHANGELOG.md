@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.19.1
+
+- Fix Lua errors on login caused by `UIPanelScrollFrameTemplate` (protected `Frame:RegisterEvent` call) and `InputScrollFrameTemplate` (nil `cursorOffset` arithmetic). Both are replaced with plain mouse-wheel ScrollFrames.
+
 ## v0.19.0
 
 - New "Profiles" tab. Create, clone, and delete named profiles; switch between them from a dropdown. Every setting (display, layout, colors, spell toggles, class color overrides) belongs to the active profile. Frame position is shared across profiles.

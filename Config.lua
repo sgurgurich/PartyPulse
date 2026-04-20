@@ -141,9 +141,19 @@ local function NewPanel(title, parentCategory, subName)
     local outer = CreateFrame("Frame", nil, UIParent)
     outer:SetSize(620, 500)
 
-    local scroll = CreateFrame("ScrollFrame", nil, outer, "UIPanelScrollFrameTemplate")
+    local scroll = CreateFrame("ScrollFrame", nil, outer)
     scroll:SetPoint("TOPLEFT", 0, -4)
-    scroll:SetPoint("BOTTOMRIGHT", -28, 4)
+    scroll:SetPoint("BOTTOMRIGHT", -8, 4)
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(self, delta)
+        local cur = self:GetVerticalScroll()
+        local maxv = self:GetVerticalScrollRange()
+        local step = 40
+        local target = cur - delta * step
+        if target < 0 then target = 0 end
+        if target > maxv then target = maxv end
+        self:SetVerticalScroll(target)
+    end)
 
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(620, 900)
@@ -934,12 +944,42 @@ local function BuildProfilesPanel()
         "To import, paste a string into the box, enter a name, and click Import.")
 
     local BOX_H = 120
-    local box = CreateFrame("ScrollFrame", nil, f.content, "InputScrollFrameTemplate")
-    box:SetSize(540, BOX_H)
-    box:SetPoint("TOPLEFT", PANEL_PAD_X, f:NextY(BOX_H + 10))
-    box.EditBox:SetWidth(520)
-    box.EditBox:SetMaxLetters(0)
-    if box.CharCount then box.CharCount:Hide() end
+    local boxBorder = CreateFrame("Frame", nil, f.content, "BackdropTemplate")
+    boxBorder:SetSize(540, BOX_H)
+    boxBorder:SetPoint("TOPLEFT", PANEL_PAD_X, f:NextY(BOX_H + 10))
+    if boxBorder.SetBackdrop then
+        boxBorder:SetBackdrop({
+            bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            edgeSize = 12,
+            insets = { left = 3, right = 3, top = 3, bottom = 3 },
+        })
+        boxBorder:SetBackdropColor(0, 0, 0, 0.5)
+    end
+
+    local boxScroll = CreateFrame("ScrollFrame", nil, boxBorder)
+    boxScroll:SetPoint("TOPLEFT", 6, -6)
+    boxScroll:SetPoint("BOTTOMRIGHT", -6, 6)
+    boxScroll:EnableMouseWheel(true)
+    boxScroll:SetScript("OnMouseWheel", function(self, delta)
+        local cur = self:GetVerticalScroll()
+        local maxv = self:GetVerticalScrollRange()
+        local target = cur - delta * 20
+        if target < 0 then target = 0 end
+        if target > maxv then target = maxv end
+        self:SetVerticalScroll(target)
+    end)
+
+    local edit = CreateFrame("EditBox", nil, boxScroll)
+    edit:SetMultiLine(true)
+    edit:SetAutoFocus(false)
+    edit:SetFontObject(ChatFontNormal)
+    edit:SetWidth(520)
+    edit:SetScript("OnEscapePressed", edit.ClearFocus)
+    boxScroll:SetScrollChild(edit)
+    boxScroll:SetScript("OnSizeChanged", function(_, w) edit:SetWidth(w) end)
+
+    local box = { EditBox = edit }
 
     local actionRow = CreateFrame("Frame", nil, f.content)
     actionRow:SetSize(580, ROW_H + 6)
