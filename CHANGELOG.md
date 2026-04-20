@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.15.1
+
+- Wind Shear now tracks a 30s cooldown on Restoration Shaman (base 12s still used for Elemental and Enhancement).
+
 ## v0.15.0
 
 - New "Class Colors" subcategory: override the color used for any class individually. Each row has a color picker and a Reset button that restores the PartyPulse default (deeper crimson for Death Knight) or Blizzard default.

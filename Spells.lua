@@ -23,6 +23,7 @@ ns.INTERRUPTS_BY_SPEC = {
     [102] = { { id = 78675,  cd = 60 } },                    -- Balance Druid: + Solar Beam
     [253] = { replace = { { id = 187707, cd = 15 } } },      -- Hunter BM: Muzzle
     [255] = { replace = { { id = 187707, cd = 15 } } },      -- Hunter SV: Muzzle
+    [264] = { replace = { { id = 57994,  cd = 30 } } },      -- Resto Shaman: Wind Shear 30s
 }
 
 function ns.GetInterruptsFor(class, specID)
