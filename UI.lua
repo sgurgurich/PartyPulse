@@ -42,6 +42,8 @@ local function WidgetOffsetX()     return (PartyPulseDB and PartyPulseDB.widgetO
 local function WidgetOffsetY()     return (PartyPulseDB and PartyPulseDB.widgetOffsetY) or 0 end
 local function IconBorderShown()   return not (PartyPulseDB and PartyPulseDB.iconBorderShown == false) end
 local function IconBorderThick()   return (PartyPulseDB and PartyPulseDB.iconBorderThickness) or 1 end
+local function IconBarGap()        return (PartyPulseDB and PartyPulseDB.iconBarGap) or 4 end
+local function IconBarOffsetY()    return (PartyPulseDB and PartyPulseDB.iconBarOffsetY) or 0 end
 
 local function ColorOr(key, dr, dg, db, da)
     local c = PartyPulseDB and PartyPulseDB[key]
@@ -281,12 +283,13 @@ end
 -- ---- composite icon+bar widget -------------------------------------------
 local function CreateBothWidget(parent)
     local sz = IconSize()
+    local gap = IconBarGap()
     local w = CreateFrame("Frame", nil, parent)
-    w:SetSize(sz + 4 + BarWidth(), sz)
+    w:SetSize(sz + gap + BarWidth(), sz)
     w.icon = CreateIconWidget(w)
     w.icon:SetPoint("LEFT")
     w.bar = CreateBarWidget(w)
-    w.bar:SetPoint("LEFT", w.icon, "RIGHT", 4, 0)
+    w.bar:SetPoint("LEFT", w.icon, "RIGHT", gap, IconBarOffsetY())
     w.kind = "both"
 
     function w:SetSpell(spellID)
@@ -422,7 +425,7 @@ local function LayoutRows()
     if mode == "bars" then
         w = ox + BarWidth() + PADDING * 2 + 20
     elseif mode == "both" then
-        w = ox + IconSize() + 4 + BarWidth() + PADDING * 2 + 20
+        w = ox + IconSize() + math.max(0, IconBarGap()) + BarWidth() + PADDING * 2 + 20
     else
         w = ox + 6 * IconSize() + PADDING * 2 + 20
     end
