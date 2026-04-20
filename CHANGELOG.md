@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.20.0
+
+- Remove the interrupt flash feature and its settings. Without `COMBAT_LOG_EVENT_UNFILTERED` (restricted in Midnight), we can't detect *landed* interrupts accurately, and flashing on every cast added noise. `flashEnabled`, `flashColor`, `flashDuration` saved variables are now unused (harmless leftovers). The `INT:` wire message is also gone.
+
 ## v0.19.4
 
 - Stop registering `COMBAT_LOG_EVENT_UNFILTERED` — Midnight restricts addons from registering it, which caused `Frame:RegisterEvent` forbidden errors on login. Interrupt flash now fires on cast success (same `UNIT_SPELLCAST_SUCCEEDED` hook that already starts the cooldown) instead of on confirmed landing.

@@ -51,9 +51,6 @@ local function HorizontalGrowth()  return (PartyPulseDB and PartyPulseDB.horizon
 local function SortOrder()         return (PartyPulseDB and PartyPulseDB.sortOrder) or "standard" end
 local function PlayerAnchor()      return (PartyPulseDB and PartyPulseDB.playerAnchor) or "front" end
 
-local function FlashEnabled()  return not (PartyPulseDB and PartyPulseDB.flashEnabled == false) end
-local function FlashDuration() return (PartyPulseDB and PartyPulseDB.flashDuration) or 0.6 end
-
 local function ColorOr(key, dr, dg, db, da)
     local c = PartyPulseDB and PartyPulseDB[key]
     if c then return c.r or dr, c.g or dg, c.b or db, c.a or da end
@@ -64,37 +61,6 @@ local CLASS_COLOR_DEFAULTS = {
     DEATHKNIGHT = { r = 139/255, g = 26/255, b = 30/255 },
 }
 ns.CLASS_COLOR_DEFAULTS = CLASS_COLOR_DEFAULTS
-
-local function AttachFlash(widget)
-    local t = widget:CreateTexture(nil, "OVERLAY", nil, 7)
-    t:SetAllPoints()
-    t:SetBlendMode("ADD")
-    t:SetAlpha(0)
-    t:Hide()
-    widget.flashTex = t
-end
-
-local function PlayFlash(widget)
-    if not FlashEnabled() then return end
-    local tex = widget.flashTex
-    if not tex then return end
-    local fr, fg, fb, fa = ColorOr("flashColor", 1, 0.9, 0.3, 1)
-    tex:SetColorTexture(fr, fg, fb, 1)
-    tex:SetAlpha(fa)
-    tex:Show()
-    local dur = math.max(0.05, FlashDuration())
-    local start = GetTime()
-    tex:SetScript("OnUpdate", function(self, _)
-        local t = (GetTime() - start) / dur
-        if t >= 1 then
-            self:SetAlpha(0)
-            self:SetScript("OnUpdate", nil)
-            self:Hide()
-            return
-        end
-        self:SetAlpha(fa * (1 - t))
-    end)
-end
 
 local function GetClassColor(class)
     local overrides = PartyPulseDB and PartyPulseDB.classColorOverrides
@@ -225,14 +191,12 @@ local function CreateIconWidget(parent)
         w.cooldown:SetHideCountdownNumbers(not ShowCooldownText())
     end
     w.kind = "icon"
-    AttachFlash(w)
     function w:SetSpell(spellID)
         self.tex:SetTexture(GetSpellIcon(spellID))
     end
     function w:Trigger(cd)
         self.cooldown:SetCooldown(GetTime(), cd)
     end
-    function w:Flash() PlayFlash(self) end
     return w
 end
 
@@ -264,8 +228,6 @@ local function CreateBarWidget(parent)
     w.text:SetText("")
 
     w.kind = "bar"
-    AttachFlash(w)
-    function w:Flash() PlayFlash(self) end
 
     local function applyCooldownColor(self)
         if BarUseClassColor() and self._class then
@@ -373,11 +335,6 @@ local function CreateBothWidget(parent)
     function w:Trigger(cd)
         self.icon:Trigger(cd)
         self.bar:Trigger(cd)
-    end
-
-    function w:Flash()
-        self.icon:Flash()
-        self.bar:Flash()
     end
 
     return w
@@ -650,13 +607,6 @@ function ns.ui.SetMember(unitName, class, spells)
     memberData[unitName].class = class
     memberData[unitName].spells = spells
     ApplyMember(unitName, memberData[unitName])
-end
-
-function ns.ui.FlashSpell(unitName, spellID)
-    local row = rows[unitName]
-    if not row then return end
-    local w = row.widgetByID[spellID]
-    if w and w.Flash then w:Flash() end
 end
 
 function ns.ui.TriggerCD(unitName, spellID, cd)

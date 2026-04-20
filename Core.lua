@@ -150,11 +150,6 @@ local function HandleMessage(text, sender)
         if spellID and cd and members[sender] and IsSpellEnabled(spellID) then
             ns.ui.TriggerCD(sender, spellID, cd)
         end
-    elseif kind == "INT" then
-        local spellID = tonumber(rest)
-        if spellID and members[sender] and IsSpellEnabled(spellID) then
-            ns.ui.FlashSpell(sender, spellID)
-        end
     elseif kind == "SYNC" then
         if not members[sender] then return end
         for pair in string.gmatch(rest, "[^;]+") do
@@ -207,8 +202,6 @@ frame:SetScript("OnEvent", function(_, event, ...)
             localActive[spellID] = GetTime() + cd
             ns.ui.TriggerCD(playerFullName, spellID, cd)
             ns.comm.Send(string.format("CD:%d:%d", spellID, cd))
-            ns.ui.FlashSpell(playerFullName, spellID)
-            ns.comm.Send(string.format("INT:%d", spellID))
         end
     elseif event == "CHAT_MSG_ADDON" then
         ns.comm.Handle(...)
