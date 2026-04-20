@@ -86,6 +86,14 @@ local function EnsureDefaults()
         end
         PartyPulseDB._defaultOffMigrated = true
     end
+    if ns.AllTrackedSpells then
+        for _, s in ipairs(ns.AllTrackedSpells()) do
+            local key = "spell_" .. s.id
+            if PartyPulseDB[key] == nil then
+                PartyPulseDB[key] = not SPELL_DEFAULT_OFF[s.id]
+            end
+        end
+    end
 end
 
 function ns.config.ApplyAll()
@@ -160,7 +168,7 @@ local function NewPanel(title, parentCategory, subName)
 end
 
 -- ---- Section header (not a row — no refresh, no DB binding) --------------
-local function AddSectionHeader(panel, title, extraTopGap)
+local function AddSectionHeader(panel, title, extraTopGap, color)
     local topGap = extraTopGap or 20
     panel._cursorY = panel._cursorY - topGap
 
@@ -168,6 +176,7 @@ local function AddSectionHeader(panel, title, extraTopGap)
     local lbl = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     lbl:SetPoint("TOP", parent, "TOPLEFT", PANEL_PAD_X + 290, panel._cursorY)
     lbl:SetText(title)
+    if color then lbl:SetTextColor(color.r, color.g, color.b) end
 
     local line = parent:CreateTexture(nil, "ARTWORK")
     line:SetColorTexture(1, 0.82, 0, 0.35)
@@ -800,11 +809,11 @@ local function BuildClassColorsPanel()
 end
 
 -- =========================================================================
---  Spells subcategory (vertical layout via Settings API)
+--  Spells subcategory (canvas layout, grouped by class)
 -- =========================================================================
-local function RegisterSpellToggles(cat)
-    local all = ns.AllTrackedSpells()
-    if #all == 0 then return end
+local function BuildSpellsPanel()
+    local f = NewPanel("Spells", category)
+    local all = ns.AllTrackedSpells and ns.AllTrackedSpells() or {}
 
     local byClass = {}
     for _, s in ipairs(all) do
@@ -817,27 +826,24 @@ local function RegisterSpellToggles(cat)
     for _, c in ipairs(CLASS_ORDER) do if byClass[c] then order[#order + 1] = c end end
     if byClass.OTHER then order[#order + 1] = "OTHER" end
 
+    local onChange = function() if ns.RefreshAll then ns.RefreshAll() end end
+    local first = true
     for _, class in ipairs(order) do
+        local color = (class ~= "OTHER") and CurrentClassColor(class) or nil
+        local title = (class == "OTHER") and "Other" or ClassDisplayName(class)
+        AddSectionHeader(f, title, first and 0 or nil, color)
+        first = false
         for _, s in ipairs(byClass[class]) do
-            local key = "spell_" .. s.id
-            local defaultOn = not SPELL_DEFAULT_OFF[s.id]
-            if PartyPulseDB[key] == nil then PartyPulseDB[key] = defaultOn end
-
             local info = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(s.id)
             local spellName = (info and info.name) or ("Spell " .. s.id)
-            local displayName = string.format("[%s] %s", ClassDisplayName(class), spellName)
-
-            local setting = Settings.RegisterAddOnSetting(
-                cat, "PartyPulse_" .. key, key, PartyPulseDB,
-                Settings.VarType.Boolean, displayName, defaultOn
-            )
-            setting:SetValueChangedCallback(function()
-                if ns.RefreshAll then ns.RefreshAll() end
-            end)
-            Settings.CreateCheckbox(cat, setting,
+            AddCheckRow(f, spellName, "spell_" .. s.id, onChange,
                 "Track " .. spellName .. " on your row and on party members.")
         end
     end
+
+    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    f:FinalizeHeight()
+    return f
 end
 
 -- =========================================================================
@@ -859,6 +865,5 @@ function ns.config.Register()
     Settings.RegisterCanvasLayoutSubcategory(category, BuildColorsPanel(),      "Colors")
     Settings.RegisterCanvasLayoutSubcategory(category, BuildClassColorsPanel(), "Class Colors")
 
-    local spellsCat = Settings.RegisterVerticalLayoutSubcategory(category, "Spells")
-    RegisterSpellToggles(spellsCat)
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildSpellsPanel(), "Spells")
 end

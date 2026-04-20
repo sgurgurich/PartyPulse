@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.18.0
+
+- Spells tab rebuilt: one section per class with a class-colored header, spells listed by short name underneath. Scrolls vertically like the other tabs.
+
 ## v0.17.1
 
 - Settings subcategory panels now scroll vertically when content runs off the bottom. Mouse wheel and scrollbar both work.
