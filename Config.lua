@@ -47,6 +47,8 @@ local DEFAULTS = {
     iconBarGap = 0,
     iconBarOffsetY = 0,
     iconOrientation = "vertical",
+    verticalGrowth = "down",
+    horizontalGrowth = "right",
     sortOrder = "standard",
     playerAnchor = "front",
     bgPadding = 10,
@@ -650,6 +652,16 @@ local function BuildLayoutPanel()
         "Horizontal offset of the icon/bar block from the row's left edge. Independent of the player-name offset.")
     AddSliderRow(f, "Cooldown offset Y", "widgetOffsetY", -200, 200, 1, function() ns.ui.RebuildAll() end,
         "Vertical offset of the icon/bar block. Independent of the player-name offset.")
+
+    AddSectionHeader(f, "Growth direction")
+    AddDropdownRow(f, "Vertical growth", "verticalGrowth", {
+        { "down", "Downward (default)" },
+        { "up",   "Upward" },
+    }, function() ns.ui.RebuildAll() end)
+    AddDropdownRow(f, "Horizontal growth", "horizontalGrowth", {
+        { "right", "Rightward (default)" },
+        { "left",  "Leftward" },
+    }, function() ns.ui.RebuildAll() end)
 
     AddSectionHeader(f, "Icons mode")
     AddDropdownRow(f, "Icon orientation", "iconOrientation", {

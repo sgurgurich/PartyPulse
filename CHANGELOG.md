@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.17.0
+
+- New "Growth direction" controls (Layout panel): vertical stacks can grow downward (default) or upward, horizontal stacks can grow rightward (default) or leftward. Applies whenever a member has 2+ tracked spells.
+
 ## v0.16.0
 
 - New "Interrupt flash" (Colors panel): icon/bar flashes briefly whenever an interrupt actually lands (combat-log SPELL_INTERRUPT), not just when the button is pressed. Toggle, color, and duration are all configurable.

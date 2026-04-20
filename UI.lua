@@ -46,6 +46,8 @@ local function IconBorderThick()   return (PartyPulseDB and PartyPulseDB.iconBor
 local function IconBarGap()        return (PartyPulseDB and PartyPulseDB.iconBarGap) or 4 end
 local function IconBarOffsetY()    return (PartyPulseDB and PartyPulseDB.iconBarOffsetY) or 0 end
 local function IconOrientation()   return (PartyPulseDB and PartyPulseDB.iconOrientation) or "vertical" end
+local function VerticalGrowth()    return (PartyPulseDB and PartyPulseDB.verticalGrowth) or "down" end
+local function HorizontalGrowth()  return (PartyPulseDB and PartyPulseDB.horizontalGrowth) or "right" end
 local function SortOrder()         return (PartyPulseDB and PartyPulseDB.sortOrder) or "standard" end
 local function PlayerAnchor()      return (PartyPulseDB and PartyPulseDB.playerAnchor) or "front" end
 
@@ -442,18 +444,36 @@ local function LayoutWidgets(row)
     local stack = StacksVertically()
     local gap = SpellGap()
     local ox, oy = WidgetOffsetX(), WidgetOffsetY()
+    local vUp = stack and VerticalGrowth() == "up"
+    local hLeft = (not stack) and HorizontalGrowth() == "left"
     for i, w in ipairs(row.widgets) do
         w:ClearAllPoints()
         if i == 1 then
-            if NameAbove() then
+            if vUp then
+                w:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", ox, oy)
+            elseif hLeft then
+                if NameAbove() then
+                    w:SetPoint("TOPRIGHT", row, "TOPRIGHT", -ox, -NAME_HEIGHT - 2 + oy)
+                else
+                    w:SetPoint("RIGHT", row, "RIGHT", -ox, oy)
+                end
+            elseif NameAbove() then
                 w:SetPoint("TOPLEFT", row, "TOPLEFT", ox, -NAME_HEIGHT - 2 + oy)
             else
                 w:SetPoint("LEFT", row, "LEFT", ox, oy)
             end
         elseif stack then
-            w:SetPoint("TOPLEFT", row.widgets[i - 1], "BOTTOMLEFT", 0, -gap)
+            if vUp then
+                w:SetPoint("BOTTOMLEFT", row.widgets[i - 1], "TOPLEFT", 0, gap)
+            else
+                w:SetPoint("TOPLEFT", row.widgets[i - 1], "BOTTOMLEFT", 0, -gap)
+            end
         else
-            w:SetPoint("LEFT", row.widgets[i - 1], "RIGHT", gap, 0)
+            if hLeft then
+                w:SetPoint("RIGHT", row.widgets[i - 1], "LEFT", -gap, 0)
+            else
+                w:SetPoint("LEFT", row.widgets[i - 1], "RIGHT", gap, 0)
+            end
         end
         w:Show()
     end
