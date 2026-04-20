@@ -8,21 +8,21 @@ local DEFAULTS = {
     shown = true,
     locked = false,
     scale = 1.0,
-    displayMode = "icons",
+    displayMode = "both",
     showBackdrop = false,
     showName = false,
     namePosition = "left",
     nameOffsetX = 0,
     nameOffsetY = 0,
-    nameFontSize = 12,
+    nameFontSize = 20,
     showSpellName = true,
     spellNameFontSize = 11,
-    timeFontSize = 11,
+    timeFontSize = 10,
     iconSize = 24,
-    barWidth = 140,
-    barHeight = 18,
+    barWidth = 110,
+    barHeight = 24,
     spellGap = 2,
-    rowGap = 4,
+    rowGap = 1,
     testMode = false,
     barUseClassColor = false,
     barReadyUseClassColor = true,
@@ -34,7 +34,7 @@ local DEFAULTS = {
     bgColor = { r = 0, g = 0, b = 0, a = 0.5 },
     borderColor = { r = 1, g = 1, b = 1, a = 1 },
     barBgColor = { r = 0, g = 0, b = 0, a = 0.5 },
-    barFillColor = { r = 1/255, g = 5/255, b = 30/255, a = 1 },
+    barFillColor = { r = 1/255, g = 5/255, b = 30/255, a = 0.6 },
     barReadyColor = { r = 0.2, g = 0.8, b = 0.2, a = 1 },
     textColor = { r = 1, g = 1, b = 1, a = 1 },
     readyTextColor = { r = 0, g = 1, b = 0, a = 1 },
@@ -42,9 +42,9 @@ local DEFAULTS = {
     widgetOffsetX = 90,
     widgetOffsetY = 0,
     iconBorderShown = true,
-    iconBorderThickness = 1,
+    iconBorderThickness = 2,
     iconBorderColor = { r = 0, g = 0, b = 0, a = 1 },
-    iconBarGap = 4,
+    iconBarGap = 0,
     iconBarOffsetY = 0,
     iconOrientation = "vertical",
     sortOrder = "standard",
@@ -510,7 +510,7 @@ local function BuildInfoPanel()
     local credit = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     credit:SetPoint("BOTTOM", 0, 28)
     credit:SetJustifyH("CENTER")
-    credit:SetText("Logo and concept by |cffffd100theirontip|r")
+    credit:SetText("Created by |cffffd100theirontip|r")
 
     return f
 end

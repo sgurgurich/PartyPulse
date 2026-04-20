@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.14.0
+
+- New defaults tuned from the author's in-game setup: display mode "Icons + Bars", bar width 110, bar height 24, row spacing 1, name font 20, countdown font 10, icon border 2px, icon-to-bar gap 0, and a slightly transparent on-cooldown override.
+- About page credit now reads "Created by theirontip".
+
 ## v0.13.0
 
 - New primary slash command `/pulse` opens the settings panel. `/pp` and `/partypulse` still work.

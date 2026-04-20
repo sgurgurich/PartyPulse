@@ -1,5 +1,7 @@
 # PartyPulse
 
+**[Download the latest release →](https://sgurgurich.github.io/PartyPulse/)**
+
 A lightweight party interrupt + cooldown tracker for World of Warcraft, built for the Midnight (Patch 12.0) addon API.
 
 Every player running PartyPulse reports their **own** interrupt usage over the hidden addon-message channel. Peers listen and render the cooldowns. No combat-log inference, no restricted APIs — just self-report, which is the sanctioned pattern under Midnight's addon restrictions.
