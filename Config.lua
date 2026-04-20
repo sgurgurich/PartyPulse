@@ -118,28 +118,45 @@ local LABEL_W     = 170
 local CONTROL_X   = PANEL_PAD_X + LABEL_W + 10
 
 local function NewPanel(title, parentCategory, subName)
-    local f = CreateFrame("Frame", nil, UIParent)
-    f:SetSize(620, 820)
+    local outer = CreateFrame("Frame", nil, UIParent)
+    outer:SetSize(620, 500)
 
-    local header = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    local scroll = CreateFrame("ScrollFrame", nil, outer, "UIPanelScrollFrameTemplate")
+    scroll:SetPoint("TOPLEFT", 0, -4)
+    scroll:SetPoint("BOTTOMRIGHT", -28, 4)
+
+    local content = CreateFrame("Frame", nil, scroll)
+    content:SetSize(620, 900)
+    scroll:SetScrollChild(content)
+    scroll:SetScript("OnSizeChanged", function(_, w) content:SetWidth(w) end)
+
+    outer.content = content
+    outer._scroll = scroll
+
+    local header = content:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", PANEL_PAD_X, -PANEL_PAD_Y)
     header:SetText(title)
 
-    f._cursorY = -PANEL_PAD_Y - 28
-    f._rows = {}
+    outer._cursorY = -PANEL_PAD_Y - 28
+    outer._rows = {}
 
-    function f:NextY(extra)
+    function outer:NextY(extra)
         local y = self._cursorY
         self._cursorY = self._cursorY - (ROW_H + ROW_GAP) - (extra or 0)
         return y
     end
 
-    function f:AddRow(rowFrame)
+    function outer:AddRow(rowFrame)
         self._rows[#self._rows + 1] = rowFrame
         return rowFrame
     end
 
-    return f
+    function outer:FinalizeHeight()
+        local used = math.abs(self._cursorY) + PANEL_PAD_Y
+        content:SetHeight(math.max(used, 400))
+    end
+
+    return outer
 end
 
 -- ---- Section header (not a row — no refresh, no DB binding) --------------
@@ -147,15 +164,16 @@ local function AddSectionHeader(panel, title, extraTopGap)
     local topGap = extraTopGap or 20
     panel._cursorY = panel._cursorY - topGap
 
-    local lbl = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    lbl:SetPoint("TOP", panel, "TOPLEFT", PANEL_PAD_X + 290, panel._cursorY)
+    local parent = panel.content or panel
+    local lbl = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    lbl:SetPoint("TOP", parent, "TOPLEFT", PANEL_PAD_X + 290, panel._cursorY)
     lbl:SetText(title)
 
-    local line = panel:CreateTexture(nil, "ARTWORK")
+    local line = parent:CreateTexture(nil, "ARTWORK")
     line:SetColorTexture(1, 0.82, 0, 0.35)
     line:SetHeight(1)
-    line:SetPoint("LEFT",  panel, "TOPLEFT", PANEL_PAD_X,       panel._cursorY - 22)
-    line:SetPoint("RIGHT", panel, "TOPLEFT", PANEL_PAD_X + 580, panel._cursorY - 22)
+    line:SetPoint("LEFT",  parent, "TOPLEFT", PANEL_PAD_X,       panel._cursorY - 22)
+    line:SetPoint("RIGHT", parent, "TOPLEFT", PANEL_PAD_X + 580, panel._cursorY - 22)
 
     panel._cursorY = panel._cursorY - 30
 end
@@ -169,7 +187,7 @@ end
 
 -- ---- Row: label + slider + numeric editbox ------------------------------
 local function AddSliderRow(panel, label, varKey, min, max, step, onChange, tooltip)
-    local row = CreateFrame("Frame", nil, panel)
+    local row = CreateFrame("Frame", nil, panel.content or panel)
     row:SetSize(580, ROW_H)
     row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY())
 
@@ -264,7 +282,7 @@ end
 
 -- ---- Row: label + checkbox ----------------------------------------------
 local function AddCheckRow(panel, label, varKey, onChange, tooltip)
-    local row = CreateFrame("Frame", nil, panel)
+    local row = CreateFrame("Frame", nil, panel.content or panel)
     row:SetSize(580, ROW_H)
     row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY())
 
@@ -295,7 +313,7 @@ end
 
 -- ---- Row: label + dropdown ----------------------------------------------
 local function AddDropdownRow(panel, label, varKey, options, onChange)
-    local row = CreateFrame("Frame", nil, panel)
+    local row = CreateFrame("Frame", nil, panel.content or panel)
     row:SetSize(580, ROW_H + 4)
     row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY(4))
 
@@ -338,7 +356,7 @@ end
 
 -- ---- Row: label + free-form text input ---------------------------------
 local function AddTextInputRow(panel, label, varKey, onChange, tooltip)
-    local row = CreateFrame("Frame", nil, panel)
+    local row = CreateFrame("Frame", nil, panel.content or panel)
     row:SetSize(580, ROW_H)
     row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY())
 
@@ -417,7 +435,7 @@ local function OpenColorPicker(current, hasAlpha, onChange)
 end
 
 local function AddColorRow(panel, label, varKey, hasAlpha, onChange, tooltip)
-    local row = CreateFrame("Frame", nil, panel)
+    local row = CreateFrame("Frame", nil, panel.content or panel)
     row:SetSize(580, ROW_H)
     row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY())
 
@@ -503,7 +521,7 @@ local function CurrentClassColor(class)
 end
 
 local function AddClassColorRow(panel, class, onChange)
-    local row = CreateFrame("Frame", nil, panel)
+    local row = CreateFrame("Frame", nil, panel.content or panel)
     row:SetSize(580, ROW_H)
     row:SetPoint("TOPLEFT", PANEL_PAD_X, panel:NextY())
 
@@ -629,6 +647,7 @@ local function BuildGeneralPanel()
         { "back",  "Always in back" },
     }, function() ns.ui.RebuildAll() end)
 
+    f:FinalizeHeight()
     return f
 end
 
@@ -676,6 +695,7 @@ local function BuildLayoutPanel()
         "Vertical offset of the bar relative to its icon in \"Icons + Bars\" mode.")
 
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    f:FinalizeHeight()
     return f
 end
 
@@ -715,6 +735,7 @@ local function BuildTextPanel()
         "When on, bars display the player's name instead of the spell name while the spell is off cooldown.")
 
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    f:FinalizeHeight()
     return f
 end
 
@@ -761,6 +782,7 @@ local function BuildColorsPanel()
         "Color of the \"Ready\" text shown inside bars when a spell is off cooldown.")
 
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    f:FinalizeHeight()
     return f
 end
 
@@ -773,6 +795,7 @@ local function BuildClassColorsPanel()
     end
 
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    f:FinalizeHeight()
     return f
 end
 

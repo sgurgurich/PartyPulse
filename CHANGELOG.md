@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.17.1
+
+- Settings subcategory panels now scroll vertically when content runs off the bottom. Mouse wheel and scrollbar both work.
+
 ## v0.17.0
 
 - New "Growth direction" controls (Layout panel): vertical stacks can grow downward (default) or upward, horizontal stacks can grow rightward (default) or leftward. Applies whenever a member has 2+ tracked spells.
