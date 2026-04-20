@@ -168,13 +168,17 @@ local function NewPanel(title, parentCategory, subName)
 end
 
 -- ---- Section header (not a row — no refresh, no DB binding) --------------
-local function AddSectionHeader(panel, title, extraTopGap, color)
+local function AddSectionHeader(panel, title, extraTopGap, color, leftAlign)
     local topGap = extraTopGap or 20
     panel._cursorY = panel._cursorY - topGap
 
     local parent = panel.content or panel
     local lbl = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    lbl:SetPoint("TOP", parent, "TOPLEFT", PANEL_PAD_X + 290, panel._cursorY)
+    if leftAlign then
+        lbl:SetPoint("TOPLEFT", parent, "TOPLEFT", PANEL_PAD_X, panel._cursorY)
+    else
+        lbl:SetPoint("TOP", parent, "TOPLEFT", PANEL_PAD_X + 290, panel._cursorY)
+    end
     lbl:SetText(title)
     if color then lbl:SetTextColor(color.r, color.g, color.b) end
 
@@ -831,7 +835,7 @@ local function BuildSpellsPanel()
     for _, class in ipairs(order) do
         local color = (class ~= "OTHER") and CurrentClassColor(class) or nil
         local title = (class == "OTHER") and "Other" or ClassDisplayName(class)
-        AddSectionHeader(f, title, first and 0 or nil, color)
+        AddSectionHeader(f, title, first and 0 or nil, color, true)
         first = false
         for _, s in ipairs(byClass[class]) do
             local info = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(s.id)
