@@ -794,7 +794,6 @@ local function BuildLayoutPanel()
     AddSliderRow(f, "Icon-to-bar Y offset", "iconBarOffsetY", -40, 40, 1, function() ns.ui.RebuildAll() end,
         "Vertical offset of the bar relative to its icon in \"Icons + Bars\" mode.")
 
-    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     f:FinalizeHeight()
     return f
 end
@@ -834,7 +833,6 @@ local function BuildTextPanel()
     AddCheckRow(f, "Show player name when Ready", "showPlayerNameWhenReady", function() ns.ui.RebuildAll() end,
         "When on, bars display the player's name instead of the spell name while the spell is off cooldown.")
 
-    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     f:FinalizeHeight()
     return f
 end
@@ -881,7 +879,6 @@ local function BuildColorsPanel()
     AddColorRow(f, "Ready text color", "readyTextColor", true, function() ns.ui.RebuildAll() end,
         "Color of the \"Ready\" text shown inside bars when a spell is off cooldown.")
 
-    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     f:FinalizeHeight()
     return f
 end
@@ -894,7 +891,6 @@ local function BuildClassColorsPanel()
         AddClassColorRow(f, class, function() ns.ui.RebuildAll() end)
     end
 
-    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     f:FinalizeHeight()
     return f
 end
@@ -1044,7 +1040,6 @@ local function BuildProfilesPanel()
     end)
     f:AddRow(actionRow)
 
-    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     f:FinalizeHeight()
     return f
 end
@@ -1082,7 +1077,6 @@ local function BuildSpellsPanel()
         end
     end
 
-    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     f:FinalizeHeight()
     return f
 end
@@ -1098,9 +1092,7 @@ function ns.config.Register()
     category = Settings.RegisterCanvasLayoutCategory(infoPanel, "PartyPulse")
     Settings.RegisterAddOnCategory(category)
 
-    local generalPanel = BuildGeneralPanel()
-    generalPanel:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
-    Settings.RegisterCanvasLayoutSubcategory(category, generalPanel, "General")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildGeneralPanel(), "General")
     Settings.RegisterCanvasLayoutSubcategory(category, BuildLayoutPanel(),      "Layout")
     Settings.RegisterCanvasLayoutSubcategory(category, BuildTextPanel(),        "Text")
     Settings.RegisterCanvasLayoutSubcategory(category, BuildColorsPanel(),      "Colors")

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.19.3
+
+- Fix remaining `Frame:RegisterEvent` protected-call error (x7, one per settings subcategory) by removing the per-panel `OnShow` refresh handler. Individual editboxes still refresh their own text via their own `OnShow`, and profile switches still refresh all panels explicitly.
+
 ## v0.19.2
 
 - Replace UIPanelButtonTemplate buttons (Profiles tab + class-color Reset) with plain buttons to fix another `Frame:RegisterEvent` protected-call error.
