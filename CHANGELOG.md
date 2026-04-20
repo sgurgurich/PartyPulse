@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.19.2
+
+- Replace UIPanelButtonTemplate buttons (Profiles tab + class-color Reset) with plain buttons to fix another `Frame:RegisterEvent` protected-call error.
+
 ## v0.19.1
 
 - Fix Lua errors on login caused by `UIPanelScrollFrameTemplate` (protected `Frame:RegisterEvent` call) and `InputScrollFrameTemplate` (nil `cursorOffset` arithmetic). Both are replaced with plain mouse-wheel ScrollFrames.

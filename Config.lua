@@ -229,6 +229,33 @@ local function ConfirmAction(prompt, callback)
     StaticPopup_Show("PARTYPULSE_CONFIRM", prompt, nil, { callback = callback })
 end
 
+-- Plain button that doesn't inherit from UIPanelButtonTemplate.
+-- Some Blizzard templates now call Frame:RegisterEvent() via secure hooks
+-- which can trigger ADDON_ACTION_FORBIDDEN for addon children — avoid them.
+local function StyledButton(parent, text, w, h)
+    local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
+    b:SetSize(w or 120, h or 24)
+    if b.SetBackdrop then
+        b:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            edgeSize = 10,
+            insets = { left = 2, right = 2, top = 2, bottom = 2 },
+        })
+        b:SetBackdropColor(0.18, 0.18, 0.18, 1)
+        b:SetBackdropBorderColor(0.55, 0.55, 0.55, 1)
+    end
+    local fs = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    fs:SetPoint("CENTER", 0, 1)
+    fs:SetText(text)
+    b.text = fs
+    b:SetScript("OnEnter",     function(s) if s.SetBackdropColor then s:SetBackdropColor(0.32, 0.32, 0.32, 1) end end)
+    b:SetScript("OnLeave",     function(s) if s.SetBackdropColor then s:SetBackdropColor(0.18, 0.18, 0.18, 1) end end)
+    b:SetScript("OnMouseDown", function(s) if s.SetBackdropColor then s:SetBackdropColor(0.10, 0.10, 0.10, 1) end end)
+    b:SetScript("OnMouseUp",   function(s) if s.SetBackdropColor then s:SetBackdropColor(0.32, 0.32, 0.32, 1) end end)
+    return b
+end
+
 -- ---- Section header (not a row — no refresh, no DB binding) --------------
 local function AddSectionHeader(panel, title, extraTopGap, color, leftAlign)
     local topGap = extraTopGap or 20
@@ -636,10 +663,8 @@ local function AddClassColorRow(panel, class, onChange)
         end)
     end)
 
-    local reset = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+    local reset = StyledButton(row, "Reset", 80, 22)
     reset:SetPoint("LEFT", btn, "RIGHT", 10, 0)
-    reset:SetSize(80, 22)
-    reset:SetText("Reset")
     reset:SetScript("OnClick", function()
         if PartyPulseDB.classColorOverrides then
             PartyPulseDB.classColorOverrides[class] = nil
@@ -905,8 +930,8 @@ local function BuildProfilesPanel()
     btnRow:SetPoint("TOPLEFT", PANEL_PAD_X, f:NextY(6))
 
     local function MakeBtn(label, x, onClick)
-        local b = CreateFrame("Button", nil, btnRow, "UIPanelButtonTemplate")
-        b:SetSize(120, 24); b:SetPoint("LEFT", x, 0); b:SetText(label)
+        local b = StyledButton(btnRow, label, 120, 24)
+        b:SetPoint("LEFT", x, 0)
         b:SetScript("OnClick", onClick)
         return b
     end
@@ -985,8 +1010,8 @@ local function BuildProfilesPanel()
     actionRow:SetSize(580, ROW_H + 6)
     actionRow:SetPoint("TOPLEFT", PANEL_PAD_X, f:NextY(6))
 
-    local exportBtn = CreateFrame("Button", nil, actionRow, "UIPanelButtonTemplate")
-    exportBtn:SetSize(120, 24); exportBtn:SetPoint("LEFT", 0, 0); exportBtn:SetText("Export")
+    local exportBtn = StyledButton(actionRow, "Export", 120, 24)
+    exportBtn:SetPoint("LEFT", 0, 0)
     exportBtn:SetScript("OnClick", function()
         local s = ns.profiles.Export()
         if s then
@@ -1003,8 +1028,8 @@ local function BuildProfilesPanel()
     nameEdit:SetPoint("LEFT", nameLbl, "RIGHT", 10, 0)
     nameEdit:SetSize(140, 20); nameEdit:SetAutoFocus(false); nameEdit:SetMaxLetters(32)
 
-    local importBtn = CreateFrame("Button", nil, actionRow, "UIPanelButtonTemplate")
-    importBtn:SetSize(100, 24); importBtn:SetPoint("LEFT", nameEdit, "RIGHT", 10, 0); importBtn:SetText("Import")
+    local importBtn = StyledButton(actionRow, "Import", 100, 24)
+    importBtn:SetPoint("LEFT", nameEdit, "RIGHT", 10, 0)
     importBtn:SetScript("OnClick", function()
         local str = box.EditBox:GetText() or ""
         local name = nameEdit:GetText() or ""
