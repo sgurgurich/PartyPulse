@@ -52,6 +52,9 @@ local DEFAULTS = {
     bgPadding = 10,
     bgBorderSize = 12,
     classColorOverrides = {},
+    flashEnabled = true,
+    flashDuration = 0.6,
+    flashColor = { r = 1, g = 0.9, b = 0.3, a = 1 },
 }
 
 -- Spells whose tracking should default to OFF instead of ON.
@@ -732,6 +735,12 @@ local function BuildColorsPanel()
     AddSectionHeader(f, "Icons")
     AddCheckRow(f, "Show icon border", "iconBorderShown", function() ns.ui.RebuildAll() end)
     AddColorRow(f, "Icon border color", "iconBorderColor", true, function() ns.ui.RebuildAll() end)
+
+    AddSectionHeader(f, "Interrupt flash")
+    AddCheckRow(f, "Flash on successful interrupt", "flashEnabled", nil,
+        "Briefly flash a widget when its interrupt successfully lands.")
+    AddColorRow(f, "Flash color", "flashColor", true, nil)
+    AddSliderRow(f, "Flash duration (sec)", "flashDuration", 0.1, 2.0, 0.05, nil)
 
     AddSectionHeader(f, "Text")
     AddColorRow(f, "Text color", "textColor", true, function() ns.ui.RebuildAll() end,

@@ -150,6 +150,11 @@ local function HandleMessage(text, sender)
         if spellID and cd and members[sender] and IsSpellEnabled(spellID) then
             ns.ui.TriggerCD(sender, spellID, cd)
         end
+    elseif kind == "INT" then
+        local spellID = tonumber(rest)
+        if spellID and members[sender] and IsSpellEnabled(spellID) then
+            ns.ui.FlashSpell(sender, spellID)
+        end
     elseif kind == "SYNC" then
         if not members[sender] then return end
         for pair in string.gmatch(rest, "[^;]+") do
@@ -168,6 +173,7 @@ frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 frame:RegisterEvent("CHAT_MSG_ADDON")
 
 frame:SetScript("OnEvent", function(_, event, ...)
@@ -201,6 +207,13 @@ frame:SetScript("OnEvent", function(_, event, ...)
             ns.ui.TriggerCD(playerFullName, spellID, cd)
             ns.comm.Send(string.format("CD:%d:%d", spellID, cd))
         end
+    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
+        local _, subevent, _, sourceGUID, _, _, _, _, _, _, _, spellID = CombatLogGetCurrentEventInfo()
+        if subevent ~= "SPELL_INTERRUPT" then return end
+        if sourceGUID ~= UnitGUID("player") then return end
+        if not IsSpellEnabled(spellID) then return end
+        ns.ui.FlashSpell(playerFullName, spellID)
+        ns.comm.Send(string.format("INT:%d", spellID))
     elseif event == "CHAT_MSG_ADDON" then
         ns.comm.Handle(...)
     end

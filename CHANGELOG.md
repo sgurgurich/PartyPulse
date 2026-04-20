@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.16.0
+
+- New "Interrupt flash" (Colors panel): icon/bar flashes briefly whenever an interrupt actually lands (combat-log SPELL_INTERRUPT), not just when the button is pressed. Toggle, color, and duration are all configurable.
+- New wire message `INT:<spellID>` broadcasts successful interrupts so peers flash too. Both players need to be on this version or newer.
+
 ## v0.15.1
 
 - Wind Shear now tracks a 30s cooldown on Restoration Shaman (base 12s still used for Elemental and Enhancement).
