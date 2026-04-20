@@ -26,7 +26,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 18px;
       max-width: 640px;
       width: 100%;
     }
@@ -115,8 +115,6 @@
       Every client broadcasts its own casts so your whole party sees every kick in real time.
     </p>
 
-    <div id="version" class="version loading">loading latest version…</div>
-
     <a id="download" class="download" href="https://github.com/sgurgurich/PartyPulse/releases/latest" aria-disabled="true">
       Download
     </a>
@@ -138,7 +136,6 @@
 
   <script>
     (async function () {
-      const versionEl = document.getElementById('version');
       const downloadEl = document.getElementById('download');
       try {
         const res = await fetch('https://api.github.com/repos/sgurgurich/PartyPulse/releases/latest');
@@ -146,8 +143,6 @@
         const data = await res.json();
         const tag = data.tag_name || '';
         const zipAsset = (data.assets || []).find(a => /\.zip$/i.test(a.name));
-        versionEl.textContent = tag ? `version ${tag}` : 'latest';
-        versionEl.classList.remove('loading');
         if (zipAsset) {
           downloadEl.href = zipAsset.browser_download_url;
           downloadEl.removeAttribute('aria-disabled');
@@ -157,8 +152,6 @@
           downloadEl.removeAttribute('aria-disabled');
         }
       } catch (e) {
-        versionEl.textContent = 'latest';
-        versionEl.classList.remove('loading');
         downloadEl.textContent = 'View releases';
         downloadEl.removeAttribute('aria-disabled');
       }
