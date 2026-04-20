@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.19.4
+
+- Stop registering `COMBAT_LOG_EVENT_UNFILTERED` — Midnight restricts addons from registering it, which caused `Frame:RegisterEvent` forbidden errors on login. Interrupt flash now fires on cast success (same `UNIT_SPELLCAST_SUCCEEDED` hook that already starts the cooldown) instead of on confirmed landing.
+
 ## v0.19.3
 
 - Fix remaining `Frame:RegisterEvent` protected-call error (x7, one per settings subcategory) by removing the per-panel `OnShow` refresh handler. Individual editboxes still refresh their own text via their own `OnShow`, and profile switches still refresh all panels explicitly.

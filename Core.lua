@@ -173,7 +173,6 @@ frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 frame:RegisterEvent("CHAT_MSG_ADDON")
 frame:RegisterEvent("PLAYER_LOGOUT")
 
@@ -208,14 +207,9 @@ frame:SetScript("OnEvent", function(_, event, ...)
             localActive[spellID] = GetTime() + cd
             ns.ui.TriggerCD(playerFullName, spellID, cd)
             ns.comm.Send(string.format("CD:%d:%d", spellID, cd))
+            ns.ui.FlashSpell(playerFullName, spellID)
+            ns.comm.Send(string.format("INT:%d", spellID))
         end
-    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        local _, subevent, _, sourceGUID, _, _, _, _, _, _, _, spellID = CombatLogGetCurrentEventInfo()
-        if subevent ~= "SPELL_INTERRUPT" then return end
-        if sourceGUID ~= UnitGUID("player") then return end
-        if not IsSpellEnabled(spellID) then return end
-        ns.ui.FlashSpell(playerFullName, spellID)
-        ns.comm.Send(string.format("INT:%d", spellID))
     elseif event == "CHAT_MSG_ADDON" then
         ns.comm.Handle(...)
     elseif event == "PLAYER_LOGOUT" then
