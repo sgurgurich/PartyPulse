@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.11.1
+
+- Section headers inside settings panels are now centered above their underline.
+
 ## v0.11.0
 
 - New frame background controls (Colors panel → Frame background section): border thickness (0 hides the border) and inner padding sliders, plus the existing color/transparency pickers.

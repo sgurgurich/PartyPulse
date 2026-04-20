@@ -142,7 +142,7 @@ local function AddSectionHeader(panel, title, extraTopGap)
     panel._cursorY = panel._cursorY - topGap
 
     local lbl = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    lbl:SetPoint("TOPLEFT", PANEL_PAD_X, panel._cursorY)
+    lbl:SetPoint("TOP", panel, "TOPLEFT", PANEL_PAD_X + 290, panel._cursorY)
     lbl:SetText(title)
 
     local line = panel:CreateTexture(nil, "ARTWORK")
