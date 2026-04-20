@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.11.2
+
+- More breathing room between sections inside settings panels.
+
 ## v0.11.1
 
 - Section headers inside settings panels are now centered above their underline.

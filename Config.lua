@@ -113,7 +113,7 @@ local CONTROL_X   = PANEL_PAD_X + LABEL_W + 10
 
 local function NewPanel(title, parentCategory, subName)
     local f = CreateFrame("Frame", nil, UIParent)
-    f:SetSize(620, 720)
+    f:SetSize(620, 820)
 
     local header = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", PANEL_PAD_X, -PANEL_PAD_Y)
@@ -138,7 +138,7 @@ end
 
 -- ---- Section header (not a row — no refresh, no DB binding) --------------
 local function AddSectionHeader(panel, title, extraTopGap)
-    local topGap = extraTopGap or 8
+    local topGap = extraTopGap or 20
     panel._cursorY = panel._cursorY - topGap
 
     local lbl = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
