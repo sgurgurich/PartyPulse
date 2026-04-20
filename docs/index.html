@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PartyPulse — WoW interrupt tracker</title>
+  <meta name="description" content="Midnight-compatible party interrupt cooldown tracker for World of Warcraft.">
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0b0d12;
+      color: #e6ebf4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 64px;
+      text-align: center;
+    }
+    .logo {
+      max-width: 520px;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 170, 255, 0.15);
+    }
+    h1 {
+      margin: 28px 0 8px;
+      font-size: 2.4rem;
+      letter-spacing: 0.02em;
+    }
+    .tagline {
+      margin: 0 0 24px;
+      color: #9fb0c7;
+      max-width: 560px;
+      line-height: 1.5;
+    }
+    .version {
+      display: inline-block;
+      padding: 4px 12px;
+      margin-bottom: 24px;
+      background: rgba(0, 170, 255, 0.12);
+      border: 1px solid rgba(0, 170, 255, 0.4);
+      color: #7ed0ff;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .version.loading { color: #9fb0c7; border-color: rgba(159, 176, 199, 0.3); background: transparent; }
+    .download {
+      display: inline-block;
+      padding: 14px 36px;
+      background: linear-gradient(180deg, #1dbbff 0%, #0095d6 100%);
+      color: #04121c;
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-decoration: none;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0, 149, 214, 0.35);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .download:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0, 149, 214, 0.5); }
+    .download[aria-disabled="true"] { pointer-events: none; opacity: 0.5; }
+    .install {
+      margin-top: 36px;
+      max-width: 560px;
+      text-align: left;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 20px 24px;
+      line-height: 1.6;
+    }
+    .install h2 { margin: 0 0 10px; font-size: 1.1rem; color: #cfe4ff; }
+    .install ol { margin: 0; padding-left: 20px; }
+    .install code {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.92em;
+    }
+    footer {
+      margin-top: 40px;
+      color: #6f809a;
+      font-size: 0.88rem;
+    }
+    footer a { color: #9fb0c7; }
+  </style>
+</head>
+<body>
+  <img class="logo" src="logo.png" alt="PartyPulse logo">
+  <h1>PartyPulse</h1>
+  <p class="tagline">
+    A Midnight-compatible party interrupt &amp; cooldown tracker for World of Warcraft.
+    Every client broadcasts its own casts so your whole party sees every kick in real time.
+  </p>
+
+  <div id="version" class="version loading">loading latest version…</div>
+  <br>
+  <a id="download" class="download" href="https://github.com/sgurgurich/PartyPulse/releases/latest" aria-disabled="true">
+    Download
+  </a>
+
+  <section class="install">
+    <h2>Install</h2>
+    <ol>
+      <li>Download the zip above.</li>
+      <li>Extract it into <code>World of Warcraft/_retail_/Interface/AddOns/</code>. You should end up with a <code>PartyPulse</code> folder (not a nested one).</li>
+      <li>Launch WoW and enable <strong>PartyPulse</strong> in the AddOns list. Type <code>/pulse</code> to open settings.</li>
+    </ol>
+  </section>
+
+  <footer>
+    Logo &amp; concept by <strong>theirontip</strong> ·
+    <a href="https://github.com/sgurgurich/PartyPulse">source on GitHub</a>
+  </footer>
+
+  <script>
+    (async function () {
+      const versionEl = document.getElementById('version');
+      const downloadEl = document.getElementById('download');
+      try {
+        const res = await fetch('https://api.github.com/repos/sgurgurich/PartyPulse/releases/latest');
+        if (!res.ok) throw new Error('release fetch failed');
+        const data = await res.json();
+        const tag = data.tag_name || '';
+        const zipAsset = (data.assets || []).find(a => /\.zip$/i.test(a.name));
+        versionEl.textContent = tag ? `version ${tag}` : 'latest';
+        versionEl.classList.remove('loading');
+        if (zipAsset) {
+          downloadEl.href = zipAsset.browser_download_url;
+          downloadEl.removeAttribute('aria-disabled');
+          downloadEl.textContent = `Download ${tag || 'latest'}`;
+        } else {
+          downloadEl.textContent = 'View releases';
+          downloadEl.removeAttribute('aria-disabled');
+        }
+      } catch (e) {
+        versionEl.textContent = 'latest';
+        versionEl.classList.remove('loading');
+        downloadEl.textContent = 'View releases';
+        downloadEl.removeAttribute('aria-disabled');
+      }
+    })();
+  </script>
+</body>
+</html>
