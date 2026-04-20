@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.13.0
+
+- New primary slash command `/pulse` opens the settings panel. `/pp` and `/partypulse` still work.
+
 ## v0.12.1
 
 - Added the logo asset to the addon so the about page renders the image.

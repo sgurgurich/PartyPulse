@@ -206,8 +206,9 @@ frame:SetScript("OnEvent", function(_, event, ...)
     end
 end)
 
-SLASH_PARTYPULSE1 = "/pp"
-SLASH_PARTYPULSE2 = "/partypulse"
+SLASH_PARTYPULSE1 = "/pulse"
+SLASH_PARTYPULSE2 = "/pp"
+SLASH_PARTYPULSE3 = "/partypulse"
 SlashCmdList.PARTYPULSE = function()
     ns.config.Open()
 end
