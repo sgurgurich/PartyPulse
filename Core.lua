@@ -175,6 +175,7 @@ frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 frame:RegisterEvent("CHAT_MSG_ADDON")
+frame:RegisterEvent("PLAYER_LOGOUT")
 
 frame:SetScript("OnEvent", function(_, event, ...)
     if event == "PLAYER_LOGIN" then
@@ -184,6 +185,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
         RefreshSpec()
         ns.comm.Init()
         ns.comm.OnReceive(HandleMessage)
+        if ns.profiles and ns.profiles.Init then ns.profiles.Init() end
         ns.config.Register()
         ns.config.ApplyAll()
         EnsureSelfRow()
@@ -216,6 +218,8 @@ frame:SetScript("OnEvent", function(_, event, ...)
         ns.comm.Send(string.format("INT:%d", spellID))
     elseif event == "CHAT_MSG_ADDON" then
         ns.comm.Handle(...)
+    elseif event == "PLAYER_LOGOUT" then
+        if ns.profiles and ns.profiles.SaveCurrent then ns.profiles.SaveCurrent() end
     end
 end)
 

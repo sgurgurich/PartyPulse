@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.19.0
+
+- New "Profiles" tab. Create, clone, and delete named profiles; switch between them from a dropdown. Every setting (display, layout, colors, spell toggles, class color overrides) belongs to the active profile. Frame position is shared across profiles.
+- Export the active profile to a shareable string and import profiles from a string pasted by another user. Strings are prefixed with `PPv1:` for versioning.
+- Adds a new SavedVariable `PartyPulseProfiles`. Existing settings are automatically migrated into a "Default" profile on first login.
+
 ## v0.18.1
 
 - Spells tab section headers are now left-justified (other tabs stay centered).

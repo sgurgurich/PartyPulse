@@ -95,6 +95,18 @@ local function EnsureDefaults()
         end
     end
 end
+ns.config.EnsureDefaults = EnsureDefaults
+
+local _allPanels = {}
+function ns.config.RefreshAllPanels()
+    for _, p in ipairs(_allPanels) do
+        if p and p._rows then
+            for _, r in ipairs(p._rows) do
+                if r.Refresh then r:Refresh() end
+            end
+        end
+    end
+end
 
 function ns.config.ApplyAll()
     EnsureDefaults()
@@ -164,7 +176,47 @@ local function NewPanel(title, parentCategory, subName)
         content:SetHeight(math.max(used, 400))
     end
 
+    _allPanels[#_allPanels + 1] = outer
     return outer
+end
+
+StaticPopupDialogs = StaticPopupDialogs or {}
+StaticPopupDialogs["PARTYPULSE_NAME_INPUT"] = {
+    text = "%s",
+    button1 = OKAY or "Okay",
+    button2 = CANCEL or "Cancel",
+    hasEditBox = true,
+    maxLetters = 32,
+    OnShow = function(self)
+        if self.editBox then self.editBox:SetText(""); self.editBox:SetFocus() end
+    end,
+    OnAccept = function(self, data)
+        local name = self.editBox and self.editBox:GetText() or ""
+        if data and data.callback then data.callback(name) end
+    end,
+    EditBoxOnEnterPressed = function(self, data)
+        local name = self:GetText()
+        self:GetParent():Hide()
+        if data and data.callback then data.callback(name) end
+    end,
+    EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+StaticPopupDialogs["PARTYPULSE_CONFIRM"] = {
+    text = "%s",
+    button1 = YES or "Yes",
+    button2 = NO or "No",
+    OnAccept = function(_, data)
+        if data and data.callback then data.callback() end
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+
+local function PromptName(prompt, callback)
+    StaticPopup_Show("PARTYPULSE_NAME_INPUT", prompt, nil, { callback = callback })
+end
+local function ConfirmAction(prompt, callback)
+    StaticPopup_Show("PARTYPULSE_CONFIRM", prompt, nil, { callback = callback })
 end
 
 -- ---- Section header (not a row — no refresh, no DB binding) --------------
@@ -813,6 +865,126 @@ local function BuildClassColorsPanel()
 end
 
 -- =========================================================================
+--  Profiles subcategory
+-- =========================================================================
+local function BuildProfilesPanel()
+    local f = NewPanel("Profiles", category)
+
+    AddSectionHeader(f, "Active profile", 0)
+
+    local ddRow = CreateFrame("Frame", nil, f.content)
+    ddRow:SetSize(580, ROW_H + 4)
+    ddRow:SetPoint("TOPLEFT", PANEL_PAD_X, f:NextY(4))
+    local ddLbl = ddRow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ddLbl:SetPoint("LEFT", 0, 0); ddLbl:SetWidth(LABEL_W); ddLbl:SetJustifyH("LEFT")
+    ddLbl:SetText("Profile")
+    local dd = CreateFrame("DropdownButton", nil, ddRow, "WowStyle1DropdownTemplate")
+    dd:SetPoint("LEFT", LABEL_W + 6, 0); dd:SetWidth(240)
+    dd:SetupMenu(function(_, root)
+        for _, name in ipairs(ns.profiles.List()) do
+            root:CreateRadio(name,
+                function() return ns.profiles.Active() == name end,
+                function() ns.profiles.Switch(name) end)
+        end
+    end)
+    function ddRow:Refresh() dd:GenerateMenu() end
+    f:AddRow(ddRow)
+
+    local btnRow = CreateFrame("Frame", nil, f.content)
+    btnRow:SetSize(580, ROW_H + 6)
+    btnRow:SetPoint("TOPLEFT", PANEL_PAD_X, f:NextY(6))
+
+    local function MakeBtn(label, x, onClick)
+        local b = CreateFrame("Button", nil, btnRow, "UIPanelButtonTemplate")
+        b:SetSize(120, 24); b:SetPoint("LEFT", x, 0); b:SetText(label)
+        b:SetScript("OnClick", onClick)
+        return b
+    end
+
+    MakeBtn("New", 0, function()
+        PromptName("Name for new profile:", function(name)
+            if not name or name == "" then return end
+            local ok, err = ns.profiles.Add(name)
+            if not ok then print("|cffff6060PartyPulse:|r " .. (err or "failed")) end
+        end)
+    end)
+    MakeBtn("Clone active", 130, function()
+        PromptName("Name for cloned profile:", function(name)
+            if not name or name == "" then return end
+            local ok, err = ns.profiles.Clone(name)
+            if not ok then print("|cffff6060PartyPulse:|r " .. (err or "failed")) end
+        end)
+    end)
+    MakeBtn("Delete active", 260, function()
+        local active = ns.profiles.Active()
+        if not active then return end
+        ConfirmAction("Delete profile '" .. active .. "'? This cannot be undone.", function()
+            local ok, err = ns.profiles.Remove(active)
+            if not ok then print("|cffff6060PartyPulse:|r " .. (err or "failed")) end
+        end)
+    end)
+    f:AddRow(btnRow)
+
+    AddSectionHeader(f, "Export / Import")
+
+    local help = f.content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    help:SetPoint("TOPLEFT", PANEL_PAD_X, f:NextY(-6))
+    help:SetWidth(540); help:SetJustifyH("LEFT")
+    help:SetText("Click Export to fill the box with a shareable string for the active profile. " ..
+        "To import, paste a string into the box, enter a name, and click Import.")
+
+    local BOX_H = 120
+    local box = CreateFrame("ScrollFrame", nil, f.content, "InputScrollFrameTemplate")
+    box:SetSize(540, BOX_H)
+    box:SetPoint("TOPLEFT", PANEL_PAD_X, f:NextY(BOX_H + 10))
+    box.EditBox:SetWidth(520)
+    box.EditBox:SetMaxLetters(0)
+    if box.CharCount then box.CharCount:Hide() end
+
+    local actionRow = CreateFrame("Frame", nil, f.content)
+    actionRow:SetSize(580, ROW_H + 6)
+    actionRow:SetPoint("TOPLEFT", PANEL_PAD_X, f:NextY(6))
+
+    local exportBtn = CreateFrame("Button", nil, actionRow, "UIPanelButtonTemplate")
+    exportBtn:SetSize(120, 24); exportBtn:SetPoint("LEFT", 0, 0); exportBtn:SetText("Export")
+    exportBtn:SetScript("OnClick", function()
+        local s = ns.profiles.Export()
+        if s then
+            box.EditBox:SetText(s)
+            box.EditBox:HighlightText()
+            box.EditBox:SetFocus()
+        end
+    end)
+
+    local nameLbl = actionRow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    nameLbl:SetPoint("LEFT", exportBtn, "RIGHT", 20, 0); nameLbl:SetText("Import as:")
+
+    local nameEdit = CreateFrame("EditBox", nil, actionRow, "InputBoxTemplate")
+    nameEdit:SetPoint("LEFT", nameLbl, "RIGHT", 10, 0)
+    nameEdit:SetSize(140, 20); nameEdit:SetAutoFocus(false); nameEdit:SetMaxLetters(32)
+
+    local importBtn = CreateFrame("Button", nil, actionRow, "UIPanelButtonTemplate")
+    importBtn:SetSize(100, 24); importBtn:SetPoint("LEFT", nameEdit, "RIGHT", 10, 0); importBtn:SetText("Import")
+    importBtn:SetScript("OnClick", function()
+        local str = box.EditBox:GetText() or ""
+        local name = nameEdit:GetText() or ""
+        local ok, err = ns.profiles.Import(str, name)
+        if ok then
+            ns.profiles.Switch(name)
+            nameEdit:SetText("")
+            print("|cff80ff80PartyPulse:|r imported profile '" .. name .. "'")
+        else
+            print("|cffff6060PartyPulse:|r import failed — " .. (err or "unknown"))
+        end
+    end)
+    f:AddRow(actionRow)
+
+    f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
+    f:FinalizeHeight()
+    return f
+end
+
+-- =========================================================================
 --  Spells subcategory (canvas layout, grouped by class)
 -- =========================================================================
 local function BuildSpellsPanel()
@@ -869,5 +1041,6 @@ function ns.config.Register()
     Settings.RegisterCanvasLayoutSubcategory(category, BuildColorsPanel(),      "Colors")
     Settings.RegisterCanvasLayoutSubcategory(category, BuildClassColorsPanel(), "Class Colors")
 
-    Settings.RegisterCanvasLayoutSubcategory(category, BuildSpellsPanel(), "Spells")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildSpellsPanel(),   "Spells")
+    Settings.RegisterCanvasLayoutSubcategory(category, BuildProfilesPanel(), "Profiles")
 end

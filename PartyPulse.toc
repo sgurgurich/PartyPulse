@@ -1,13 +1,14 @@
 ## Interface: 120000
 ## Title: PartyPulse
 ## Notes: Party interrupt cooldown tracker (Midnight-compatible, self-report model)
-## Version: 0.18.1
+## Version: 0.19.0
 ## Author: stefan
-## SavedVariables: PartyPulseDB
+## SavedVariables: PartyPulseDB, PartyPulseProfiles
 ## X-Curse-Project-ID: 1519200
 
 Spells.lua
 Comm.lua
 UI.lua
+Profiles.lua
 Config.lua
 Core.lua
