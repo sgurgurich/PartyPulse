@@ -205,7 +205,7 @@ local function CreateBarWidget(parent)
             local c = RAID_CLASS_COLORS[self._class]
             if c then self:SetStatusBarColor(c.r, c.g, c.b) return end
         end
-        self:SetStatusBarColor(ColorOr("barFillColor", 0.2, 0.2, 0.2, 1))
+        self:SetStatusBarColor(ColorOr("barFillColor", 1/255, 5/255, 30/255, 1))
     end
 
     local function applyReadyColor(self)

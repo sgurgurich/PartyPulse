@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.1
+
+- Default on-cooldown override color changed to deep navy (#01051e).
+
 ## v0.8.0
 
 - New "Show player name when Ready" toggle (on by default) swaps the spell name for the player's name while a bar is off cooldown.

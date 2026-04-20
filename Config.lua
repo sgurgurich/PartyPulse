@@ -34,7 +34,7 @@ local DEFAULTS = {
     bgColor = { r = 0, g = 0, b = 0, a = 0.5 },
     borderColor = { r = 1, g = 1, b = 1, a = 1 },
     barBgColor = { r = 0, g = 0, b = 0, a = 0.5 },
-    barFillColor = { r = 0.2, g = 0.2, b = 0.2, a = 1 },
+    barFillColor = { r = 1/255, g = 5/255, b = 30/255, a = 1 },
     barReadyColor = { r = 0.2, g = 0.8, b = 0.2, a = 1 },
     textColor = { r = 1, g = 1, b = 1, a = 1 },
     showCooldownText = true,
