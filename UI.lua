@@ -222,6 +222,7 @@ local function CreateBarWidget(parent)
         self:SetValue(1)
         if ShowReadyText() then
             self.text:SetText(ReadyText())
+            self.text:SetTextColor(ColorOr("readyTextColor", 0, 1, 0, 1))
         else
             self.text:SetText("")
         end
@@ -270,6 +271,7 @@ local function CreateBarWidget(parent)
         applyCooldownColor(self)
         self:SetValue(BarInvert() and 0 or 1)
         self.name:SetText(self._spellName or "")
+        self.text:SetTextColor(ColorOr("textColor", 1, 1, 1, 1))
         self:SetScript("OnUpdate", OnUpdate)
     end
 

@@ -37,6 +37,7 @@ local DEFAULTS = {
     barFillColor = { r = 1/255, g = 5/255, b = 30/255, a = 1 },
     barReadyColor = { r = 0.2, g = 0.8, b = 0.2, a = 1 },
     textColor = { r = 1, g = 1, b = 1, a = 1 },
+    readyTextColor = { r = 0, g = 1, b = 0, a = 1 },
     showCooldownText = true,
     widgetOffsetX = 90,
     widgetOffsetY = 0,
@@ -537,6 +538,8 @@ local function BuildColorsPanel()
         "When on, bars fill from empty to full as the cooldown progresses instead of draining.")
     AddColorRow(f, "Text color",           "textColor",  true, function() ns.ui.RebuildAll() end,
         "Applies to the spell name and countdown text on bars. Player name keeps the class color.")
+    AddColorRow(f, "Ready text color",     "readyTextColor", true, function() ns.ui.RebuildAll() end,
+        "Color of the \"Ready\" text shown inside bars when a spell is off cooldown.")
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     return f
 end

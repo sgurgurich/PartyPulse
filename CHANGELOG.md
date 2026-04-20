@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.2
+
+- New "Ready text color" picker in the Colors panel. Defaults to bright green; only affects the "Ready" text, not the countdown.
+
 ## v0.8.1
 
 - Default on-cooldown override color changed to deep navy (#01051e).
