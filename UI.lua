@@ -44,6 +44,9 @@ local function IconBorderShown()   return not (PartyPulseDB and PartyPulseDB.ico
 local function IconBorderThick()   return (PartyPulseDB and PartyPulseDB.iconBorderThickness) or 1 end
 local function IconBarGap()        return (PartyPulseDB and PartyPulseDB.iconBarGap) or 4 end
 local function IconBarOffsetY()    return (PartyPulseDB and PartyPulseDB.iconBarOffsetY) or 0 end
+local function IconOrientation()   return (PartyPulseDB and PartyPulseDB.iconOrientation) or "vertical" end
+local function SortOrder()         return (PartyPulseDB and PartyPulseDB.sortOrder) or "standard" end
+local function PlayerAnchor()      return (PartyPulseDB and PartyPulseDB.playerAnchor) or "front" end
 
 local function ColorOr(key, dr, dg, db, da)
     local c = PartyPulseDB and PartyPulseDB[key]
@@ -339,7 +342,9 @@ end
 
 local function StacksVertically()
     local mode = DisplayMode()
-    return mode == "bars" or mode == "both"
+    if mode == "bars" or mode == "both" then return true end
+    if mode == "icons" then return IconOrientation() == "vertical" end
+    return false
 end
 
 local function NameInline()
@@ -406,7 +411,60 @@ local function RowHeight(nSpells)
     return math.max(1, h)
 end
 
+local ROLE_RANK = {
+    thd = { TANK = 1, HEALER = 2, DAMAGER = 3, NONE = 4 },
+    htd = { HEALER = 1, TANK = 2, DAMAGER = 3, NONE = 4 },
+}
+
+local function UnitFullNameFor(unit)
+    local name, realm = UnitFullName(unit)
+    if not name then return nil end
+    realm = realm and realm ~= "" and realm or GetRealmName()
+    realm = realm and realm:gsub("%s", "") or ""
+    return name .. "-" .. realm
+end
+
+local function RoleFor(name)
+    if TEST_ROLE_BY_NAME[name] then return TEST_ROLE_BY_NAME[name] end
+    for _, unit in ipairs({ "player", "party1", "party2", "party3", "party4" }) do
+        if UnitExists(unit) then
+            local full = UnitFullNameFor(unit)
+            if full == name then return UnitGroupRolesAssigned(unit) or "NONE" end
+        end
+    end
+    return "NONE"
+end
+
+local function SortRows()
+    local rank = ROLE_RANK[SortOrder()]
+    local anchor = PlayerAnchor()
+    local pname = UnitFullNameFor("player")
+    if not rank and not pname then return end
+
+    local origIndex = {}
+    for i, n in ipairs(rowOrder) do origIndex[n] = i end
+
+    table.sort(rowOrder, function(a, b)
+        if pname then
+            if anchor == "front" then
+                if a == pname and b ~= pname then return true end
+                if b == pname and a ~= pname then return false end
+            elseif anchor == "back" then
+                if a == pname and b ~= pname then return false end
+                if b == pname and a ~= pname then return true end
+            end
+        end
+        if rank then
+            local ra = rank[RoleFor(a)] or 99
+            local rb = rank[RoleFor(b)] or 99
+            if ra ~= rb then return ra < rb end
+        end
+        return origIndex[a] < origIndex[b]
+    end)
+end
+
 local function LayoutRows()
+    SortRows()
     local y = -PADDING
     for _, name in ipairs(rowOrder) do
         local row = rows[name]
@@ -427,7 +485,11 @@ local function LayoutRows()
     elseif mode == "both" then
         w = ox + IconSize() + math.max(0, IconBarGap()) + BarWidth() + PADDING * 2 + 20
     else
-        w = ox + 6 * IconSize() + PADDING * 2 + 20
+        if IconOrientation() == "vertical" then
+            w = ox + IconSize() + PADDING * 2 + 20
+        else
+            w = ox + 6 * IconSize() + PADDING * 2 + 20
+        end
     end
     container:SetWidth(w)
 end
@@ -548,11 +610,13 @@ end
 
 -- ---- test mode ------------------------------------------------------------
 local TEST_MEMBERS = {
-    { name = "TestDK-Test",     class = "DEATHKNIGHT" },
-    { name = "TestMage-Test",   class = "MAGE" },
-    { name = "TestShaman-Test", class = "SHAMAN" },
-    { name = "TestDruid-Test",  class = "DRUID" },
+    { name = "TestDK-Test",     class = "DEATHKNIGHT", role = "TANK"    },
+    { name = "TestMage-Test",   class = "MAGE",        role = "DAMAGER" },
+    { name = "TestShaman-Test", class = "SHAMAN",      role = "HEALER"  },
+    { name = "TestDruid-Test",  class = "DRUID",       role = "DAMAGER" },
 }
+local TEST_ROLE_BY_NAME = {}
+for _, m in ipairs(TEST_MEMBERS) do TEST_ROLE_BY_NAME[m.name] = m.role end
 
 local testTicker
 

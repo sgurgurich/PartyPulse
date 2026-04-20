@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.10.0
+
+- New "Icon orientation" (Sizing panel) toggles between vertical (default) and horizontal stacking for the Icons-only display mode. Does not apply to Icons + Bars.
+- New "Sort order" (main panel): Standard (group order, default), Tank / Healer / DPS, or Healer / Tank / DPS.
+- New "Player anchor" (main panel): always pin your own row to the front or back of the list.
+
 ## v0.8.2
 
 - New "Ready text color" picker in the Colors panel. Defaults to bright green; only affects the "Ready" text, not the countdown.

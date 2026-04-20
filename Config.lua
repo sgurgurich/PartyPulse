@@ -46,6 +46,9 @@ local DEFAULTS = {
     iconBorderColor = { r = 0, g = 0, b = 0, a = 1 },
     iconBarGap = 4,
     iconBarOffsetY = 0,
+    iconOrientation = "vertical",
+    sortOrder = "standard",
+    playerAnchor = "front",
 }
 
 -- Spells whose tracking should default to OFF instead of ON.
@@ -469,6 +472,15 @@ local function BuildMainPanel()
     AddDropdownRow(f, "Display mode", "displayMode", {
         { "icons", "Icons" }, { "bars", "Bars" }, { "both", "Icons + Bars" },
     }, function() ns.ui.RebuildAll() end)
+    AddDropdownRow(f, "Sort order", "sortOrder", {
+        { "standard", "Standard (group order)" },
+        { "thd",      "Tank / Healer / DPS" },
+        { "htd",      "Healer / Tank / DPS" },
+    }, function() ns.ui.RebuildAll() end)
+    AddDropdownRow(f, "Player anchor", "playerAnchor", {
+        { "front", "Always in front" },
+        { "back",  "Always in back" },
+    }, function() ns.ui.RebuildAll() end)
     return f
 end
 
@@ -487,6 +499,10 @@ local function BuildSizingPanel()
     AddSliderRow(f, "Cooldown offset Y", "widgetOffsetY", -200, 200, 1, function() ns.ui.RebuildAll() end,
         "Vertical offset of the icon/bar block. Independent of the player-name offset.")
     AddSliderRow(f, "Icon border thickness", "iconBorderThickness", 0, 6, 1, function() ns.ui.RebuildAll() end)
+    AddDropdownRow(f, "Icon orientation (Icons mode)", "iconOrientation", {
+        { "vertical",   "Vertical"   },
+        { "horizontal", "Horizontal" },
+    }, function() ns.ui.RebuildAll() end)
     AddSliderRow(f, "Icon-to-bar gap (Icons + Bars)", "iconBarGap", -40, 40, 1, function() ns.ui.RebuildAll() end,
         "Horizontal gap between an icon and its bar in \"Icons + Bars\" mode.")
     AddSliderRow(f, "Icon-to-bar Y offset (Icons + Bars)", "iconBarOffsetY", -40, 40, 1, function() ns.ui.RebuildAll() end,
