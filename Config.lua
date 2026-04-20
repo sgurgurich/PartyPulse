@@ -24,15 +24,17 @@ local DEFAULTS = {
     spellGap = 2,
     rowGap = 4,
     testMode = false,
-    barUseClassColor = true,
+    barUseClassColor = false,
+    barReadyUseClassColor = true,
     barInvert = false,
     showReadyText = true,
     readyText = "Ready",
     cooldownFormat = "%.1f",
+    showPlayerNameWhenReady = true,
     bgColor = { r = 0, g = 0, b = 0, a = 0.5 },
     borderColor = { r = 1, g = 1, b = 1, a = 1 },
     barBgColor = { r = 0, g = 0, b = 0, a = 0.5 },
-    barFillColor = { r = 0.6, g = 0.1, b = 0.1, a = 1 },
+    barFillColor = { r = 0.2, g = 0.2, b = 0.2, a = 1 },
     barReadyColor = { r = 0.2, g = 0.8, b = 0.2, a = 1 },
     textColor = { r = 1, g = 1, b = 1, a = 1 },
     showCooldownText = true,
@@ -510,6 +512,8 @@ local function BuildTextPanel()
     AddCheckRow(f, "Show \"Ready\" text when off cooldown", "showReadyText", function() ns.ui.RebuildAll() end)
     AddTextInputRow(f, "Ready text", "readyText", function() ns.ui.RebuildAll() end,
         "Shown inside the bar when the spell is off cooldown.")
+    AddCheckRow(f, "Show player name when Ready", "showPlayerNameWhenReady", function() ns.ui.RebuildAll() end,
+        "When on, bars display the player's name instead of the spell name while the spell is off cooldown.")
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     return f
 end
@@ -519,12 +523,14 @@ local function BuildColorsPanel()
     AddColorRow(f, "Backdrop background", "bgColor",     true, function() ns.ui.SetBackdropShown(PartyPulseDB.showBackdrop) end)
     AddColorRow(f, "Backdrop border",     "borderColor", true, function() ns.ui.SetBackdropShown(PartyPulseDB.showBackdrop) end)
     AddColorRow(f, "Bar background",      "barBgColor",  true, function() ns.ui.RebuildAll() end)
-    AddCheckRow(f, "Use class color for bars", "barUseClassColor", function() ns.ui.RebuildAll() end,
+    AddCheckRow(f, "On-cooldown uses class color", "barUseClassColor", function() ns.ui.RebuildAll() end,
         "When on, the on-cooldown fill is the owner's class color. When off, uses the override below.")
     AddColorRow(f, "Bar on-cooldown color (override)", "barFillColor", true, function() ns.ui.RebuildAll() end,
-        "Used when \"Use class color for bars\" is off.")
-    AddColorRow(f, "Bar ready color", "barReadyColor", true, function() ns.ui.RebuildAll() end,
-        "Fill color when the spell is off cooldown.")
+        "Used when \"On-cooldown uses class color\" is off.")
+    AddCheckRow(f, "Ready uses class color", "barReadyUseClassColor", function() ns.ui.RebuildAll() end,
+        "When on, the ready-state fill is the owner's class color. When off, uses the override below.")
+    AddColorRow(f, "Bar ready color (override)", "barReadyColor", true, function() ns.ui.RebuildAll() end,
+        "Used when \"Ready uses class color\" is off.")
     AddCheckRow(f, "Show icon border", "iconBorderShown", function() ns.ui.RebuildAll() end)
     AddColorRow(f, "Icon border color", "iconBorderColor", true, function() ns.ui.RebuildAll() end)
     AddCheckRow(f, "Invert bar direction", "barInvert", function() ns.ui.RebuildAll() end,

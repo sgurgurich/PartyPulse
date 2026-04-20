@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.0
+
+- New "Show player name when Ready" toggle (on by default) swaps the spell name for the player's name while a bar is off cooldown.
+- Ready color now defaults to the owner's class color (new "Ready uses class color" toggle in the Colors panel, on by default).
+- On-cooldown color now defaults to dark gray. Class-colored cooldowns are still one toggle away.
+
 ## v0.7.0
 
 - New icon borders: toggle "Show icon border", customizable color and thickness (0-6 px).

@@ -30,7 +30,9 @@ local function ShowSpellName()     return not (PartyPulseDB and PartyPulseDB.sho
 local function NameFontSize()      return (PartyPulseDB and PartyPulseDB.nameFontSize) or 12 end
 local function SpellNameFontSize() return (PartyPulseDB and PartyPulseDB.spellNameFontSize) or 11 end
 local function TimeFontSize()      return (PartyPulseDB and PartyPulseDB.timeFontSize) or 11 end
-local function BarUseClassColor()  return not (PartyPulseDB and PartyPulseDB.barUseClassColor == false) end
+local function BarUseClassColor()      return PartyPulseDB and PartyPulseDB.barUseClassColor == true end
+local function BarReadyUseClassColor() return not (PartyPulseDB and PartyPulseDB.barReadyUseClassColor == false) end
+local function ShowPlayerNameWhenReady() return not (PartyPulseDB and PartyPulseDB.showPlayerNameWhenReady == false) end
 local function BarInvert()         return PartyPulseDB and PartyPulseDB.barInvert == true end
 local function ShowReadyText()     return not (PartyPulseDB and PartyPulseDB.showReadyText == false) end
 local function ReadyText()         return (PartyPulseDB and PartyPulseDB.readyText) or "Ready" end
@@ -203,10 +205,14 @@ local function CreateBarWidget(parent)
             local c = RAID_CLASS_COLORS[self._class]
             if c then self:SetStatusBarColor(c.r, c.g, c.b) return end
         end
-        self:SetStatusBarColor(ColorOr("barFillColor", 0.6, 0.1, 0.1, 1))
+        self:SetStatusBarColor(ColorOr("barFillColor", 0.2, 0.2, 0.2, 1))
     end
 
     local function applyReadyColor(self)
+        if BarReadyUseClassColor() and self._class then
+            local c = RAID_CLASS_COLORS[self._class]
+            if c then self:SetStatusBarColor(c.r, c.g, c.b) return end
+        end
         self:SetStatusBarColor(ColorOr("barReadyColor", 0.2, 0.8, 0.2, 1))
     end
 
@@ -219,16 +225,27 @@ local function CreateBarWidget(parent)
         else
             self.text:SetText("")
         end
+        if ShowPlayerNameWhenReady() and self._playerName then
+            self.name:SetText(self._playerName)
+        else
+            self.name:SetText(self._spellName or "")
+        end
     end
 
     function w:SetSpell(spellID)
-        self.name:SetText(GetSpellName(spellID))
+        self._spellName = GetSpellName(spellID)
+        self.name:SetText(self._spellName)
         self:ApplyIdle()
+    end
+
+    function w:SetPlayer(name)
+        self._playerName = name and (name:match("^[^-]+") or name) or nil
+        if self:GetScript("OnUpdate") == nil then self:ApplyIdle() end
     end
 
     function w:SetClassColor(class)
         self._class = class
-        -- idle state uses ready color; nothing to change now.
+        if self:GetScript("OnUpdate") == nil then applyReadyColor(self) end
     end
 
     local function OnUpdate(self)
@@ -252,6 +269,7 @@ local function CreateBarWidget(parent)
         self.endTime = GetTime() + cd
         applyCooldownColor(self)
         self:SetValue(BarInvert() and 0 or 1)
+        self.name:SetText(self._spellName or "")
         self:SetScript("OnUpdate", OnUpdate)
     end
 
@@ -276,6 +294,10 @@ local function CreateBothWidget(parent)
 
     function w:SetClassColor(class)
         self.bar:SetClassColor(class)
+    end
+
+    function w:SetPlayer(name)
+        self.bar:SetPlayer(name)
     end
 
     function w:Trigger(cd)
@@ -425,8 +447,9 @@ local function ApplyMember(unitName, data)
     row.widgetByID = {}
     for i, spell in ipairs(data.spells) do
         local w = CreateWidget(row)
-        w:SetSpell(spell.id)
+        if w.SetPlayer then w:SetPlayer(unitName) end
         if w.SetClassColor then w:SetClassColor(data.class) end
+        w:SetSpell(spell.id)
         row.widgets[i] = w
         row.widgetByID[spell.id] = w
     end
