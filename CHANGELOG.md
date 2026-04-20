@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.0
+
+- New icon borders: toggle "Show icon border", customizable color and thickness (0-6 px).
+- New "Show cooldown countdown text" toggle hides the remaining-seconds text on both icons and bars.
+- Player-name offset no longer moves the icons/bars. New "Cooldown offset X/Y" sliders position the icon/bar block independently.
+
 ## v0.6.2
 
 - Spell spacing can now go down to -40 (was -4) for tight or overlapping layouts.

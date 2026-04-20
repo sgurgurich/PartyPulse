@@ -35,6 +35,11 @@ local function BarInvert()         return PartyPulseDB and PartyPulseDB.barInver
 local function ShowReadyText()     return not (PartyPulseDB and PartyPulseDB.showReadyText == false) end
 local function ReadyText()         return (PartyPulseDB and PartyPulseDB.readyText) or "Ready" end
 local function CooldownFormat()    return (PartyPulseDB and PartyPulseDB.cooldownFormat) or "%.1f" end
+local function ShowCooldownText()  return not (PartyPulseDB and PartyPulseDB.showCooldownText == false) end
+local function WidgetOffsetX()     return (PartyPulseDB and PartyPulseDB.widgetOffsetX) or 90 end
+local function WidgetOffsetY()     return (PartyPulseDB and PartyPulseDB.widgetOffsetY) or 0 end
+local function IconBorderShown()   return not (PartyPulseDB and PartyPulseDB.iconBorderShown == false) end
+local function IconBorderThick()   return (PartyPulseDB and PartyPulseDB.iconBorderThickness) or 1 end
 
 local function ColorOr(key, dr, dg, db, da)
     local c = PartyPulseDB and PartyPulseDB[key]
@@ -128,8 +133,32 @@ local function CreateIconWidget(parent)
     w:SetSize(sz, sz)
     w.tex = w:CreateTexture(nil, "ARTWORK")
     w.tex:SetAllPoints()
+
+    w.border = {}
+    if IconBorderShown() and IconBorderThick() > 0 then
+        local th = IconBorderThick()
+        local br, bg_, bb, ba = ColorOr("iconBorderColor", 0, 0, 0, 1)
+        for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
+            local tex = w:CreateTexture(nil, "OVERLAY")
+            tex:SetColorTexture(br, bg_, bb, ba)
+            if side == "TOP" then
+                tex:SetPoint("TOPLEFT"); tex:SetPoint("TOPRIGHT"); tex:SetHeight(th)
+            elseif side == "BOTTOM" then
+                tex:SetPoint("BOTTOMLEFT"); tex:SetPoint("BOTTOMRIGHT"); tex:SetHeight(th)
+            elseif side == "LEFT" then
+                tex:SetPoint("TOPLEFT"); tex:SetPoint("BOTTOMLEFT"); tex:SetWidth(th)
+            else
+                tex:SetPoint("TOPRIGHT"); tex:SetPoint("BOTTOMRIGHT"); tex:SetWidth(th)
+            end
+            w.border[side] = tex
+        end
+    end
+
     w.cooldown = CreateFrame("Cooldown", nil, w, "CooldownFrameTemplate")
     w.cooldown:SetAllPoints()
+    if w.cooldown.SetHideCountdownNumbers then
+        w.cooldown:SetHideCountdownNumbers(not ShowCooldownText())
+    end
     w.kind = "icon"
     function w:SetSpell(spellID)
         self.tex:SetTexture(GetSpellIcon(spellID))
@@ -211,7 +240,11 @@ local function CreateBarWidget(parent)
         local frac = remaining / self.duration
         if BarInvert() then frac = 1 - frac end
         self:SetValue(frac)
-        self.text:SetFormattedText(CooldownFormat(), remaining)
+        if ShowCooldownText() then
+            self.text:SetFormattedText(CooldownFormat(), remaining)
+        else
+            self.text:SetText("")
+        end
     end
 
     function w:Trigger(cd)
@@ -311,15 +344,14 @@ end
 local function LayoutWidgets(row)
     local stack = StacksVertically()
     local gap = SpellGap()
+    local ox, oy = WidgetOffsetX(), WidgetOffsetY()
     for i, w in ipairs(row.widgets) do
         w:ClearAllPoints()
         if i == 1 then
-            if NameInline() then
-                w:SetPoint("LEFT", row.name, "RIGHT", 4, 0)
-            elseif NameAbove() then
-                w:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -NAME_HEIGHT - 2)
+            if NameAbove() then
+                w:SetPoint("TOPLEFT", row, "TOPLEFT", ox, -NAME_HEIGHT - 2 + oy)
             else
-                w:SetPoint("LEFT", row, "LEFT", 0, 0)
+                w:SetPoint("LEFT", row, "LEFT", ox, oy)
             end
         elseif stack then
             w:SetPoint("TOPLEFT", row.widgets[i - 1], "BOTTOMLEFT", 0, -gap)
@@ -361,14 +393,14 @@ local function LayoutRows()
     local totalH = math.max(1, -y + PADDING - RowGap())
     container:SetHeight(totalH)
     local mode = DisplayMode()
-    local nameOffset = NameInline() and NAME_WIDTH or 0
+    local ox = math.max(0, WidgetOffsetX())
     local w
     if mode == "bars" then
-        w = nameOffset + BarWidth() + PADDING * 2 + 20
+        w = ox + BarWidth() + PADDING * 2 + 20
     elseif mode == "both" then
-        w = nameOffset + IconSize() + 4 + BarWidth() + PADDING * 2 + 20
+        w = ox + IconSize() + 4 + BarWidth() + PADDING * 2 + 20
     else
-        w = nameOffset + 6 * IconSize() + PADDING * 2 + 20
+        w = ox + 6 * IconSize() + PADDING * 2 + 20
     end
     container:SetWidth(w)
 end

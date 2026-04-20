@@ -35,6 +35,12 @@ local DEFAULTS = {
     barFillColor = { r = 0.6, g = 0.1, b = 0.1, a = 1 },
     barReadyColor = { r = 0.2, g = 0.8, b = 0.2, a = 1 },
     textColor = { r = 1, g = 1, b = 1, a = 1 },
+    showCooldownText = true,
+    widgetOffsetX = 90,
+    widgetOffsetY = 0,
+    iconBorderShown = true,
+    iconBorderThickness = 1,
+    iconBorderColor = { r = 0, g = 0, b = 0, a = 1 },
 }
 
 -- Spells whose tracking should default to OFF instead of ON.
@@ -471,6 +477,11 @@ local function BuildSizingPanel()
         "Spacing between cooldowns within a member's row. Can go negative for tighter or overlapping layouts.")
     AddSliderRow(f, "Row spacing",  "rowGap",    -20,  40,  1,    function() ns.ui.RebuildAll() end,
         "Spacing between party member rows. Can go negative to make bars touch or overlap.")
+    AddSliderRow(f, "Cooldown offset X", "widgetOffsetX", -300, 400, 1, function() ns.ui.RebuildAll() end,
+        "Horizontal offset of the icon/bar block from the row's left edge. Independent of the player-name offset.")
+    AddSliderRow(f, "Cooldown offset Y", "widgetOffsetY", -200, 200, 1, function() ns.ui.RebuildAll() end,
+        "Vertical offset of the icon/bar block. Independent of the player-name offset.")
+    AddSliderRow(f, "Icon border thickness", "iconBorderThickness", 0, 6, 1, function() ns.ui.RebuildAll() end)
     f:SetScript("OnShow", function(self) RefreshAllPanelRows(self) end)
     return f
 end
@@ -494,6 +505,8 @@ local function BuildTextPanel()
         { "%.1fs", "5.3s" },
         { "%ds",   "5s"   },
     }, function() ns.ui.RebuildAll() end)
+    AddCheckRow(f, "Show cooldown countdown text", "showCooldownText", function() ns.ui.RebuildAll() end,
+        "Shows the remaining seconds on both icons and bars. Turn off to hide the countdown text.")
     AddCheckRow(f, "Show \"Ready\" text when off cooldown", "showReadyText", function() ns.ui.RebuildAll() end)
     AddTextInputRow(f, "Ready text", "readyText", function() ns.ui.RebuildAll() end,
         "Shown inside the bar when the spell is off cooldown.")
@@ -512,6 +525,8 @@ local function BuildColorsPanel()
         "Used when \"Use class color for bars\" is off.")
     AddColorRow(f, "Bar ready color", "barReadyColor", true, function() ns.ui.RebuildAll() end,
         "Fill color when the spell is off cooldown.")
+    AddCheckRow(f, "Show icon border", "iconBorderShown", function() ns.ui.RebuildAll() end)
+    AddColorRow(f, "Icon border color", "iconBorderColor", true, function() ns.ui.RebuildAll() end)
     AddCheckRow(f, "Invert bar direction", "barInvert", function() ns.ui.RebuildAll() end,
         "When on, bars fill from empty to full as the cooldown progresses instead of draining.")
     AddColorRow(f, "Text color",           "textColor",  true, function() ns.ui.RebuildAll() end,
