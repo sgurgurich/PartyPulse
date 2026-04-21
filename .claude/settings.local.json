@@ -19,7 +19,9 @@
       "Bash(unzip -o /tmp/pp/PartyPulse-v0.5.0.zip -d \"E:/Blizzard Games/World of Warcraft/_retail_/Interface/addons\")",
       "Bash(unzip -o /tmp/pp/PartyPulse-v0.5.1.zip -d \"E:/Blizzard Games/World of Warcraft/_retail_/Interface/addons\")",
       "Bash(unzip -o /tmp/pp/PartyPulse-*.zip -d \"E:/Blizzard Games/World of Warcraft/_retail_/Interface/addons\")",
-      "Bash(gh api *)"
+      "Bash(gh api *)",
+      "WebSearch",
+      "WebFetch(domain:warcraft.wiki.gg)"
     ]
   }
 }

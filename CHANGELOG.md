@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.20.1
+
+- Bump TOC `Interface` to `120005` for patch 12.0.5. No behavioral changes — nothing in PartyPulse's API surface was affected by the patch.
+
 ## v0.20.0
 
 - Remove the interrupt flash feature and its settings. Without `COMBAT_LOG_EVENT_UNFILTERED` (restricted in Midnight), we can't detect *landed* interrupts accurately, and flashing on every cast added noise. `flashEnabled`, `flashColor`, `flashDuration` saved variables are now unused (harmless leftovers). The `INT:` wire message is also gone.
