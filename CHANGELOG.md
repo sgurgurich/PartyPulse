@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.20.2
+
+- Fix party members' kicks not showing in cross-realm instance groups (M+, LFG, LFR). Addon messages are now sent on `INSTANCE_CHAT` when in an instance group; `PARTY`/`RAID` silently dropped messages for cross-realm teammates, so HELLOs and CDs never reached them.
+
 ## v0.20.1
 
 - Bump TOC `Interface` to `120005` for patch 12.0.5. No behavioral changes — nothing in PartyPulse's API surface was affected by the patch.
