@@ -9,11 +9,55 @@ local members = {}
 -- spellID -> endTime (GetTime() seconds). Own active cooldowns, for late-join sync.
 local localActive = {}
 
-local function GetPlayerFullName()
-    local name, realm = UnitFullName("player")
+local function NormalizeRealm(realm)
     realm = realm and realm ~= "" and realm or GetRealmName()
-    realm = realm and realm:gsub("%s", "") or ""
-    return name .. "-" .. realm
+    return realm and realm:gsub("%s", "") or ""
+end
+
+local function UnitFullNameNormalized(unit)
+    local name, realm = UnitFullName(unit)
+    if not name then return nil end
+    return name .. "-" .. NormalizeRealm(realm)
+end
+
+local function GetPlayerFullName()
+    return UnitFullNameNormalized("player")
+end
+
+-- Returns a set of Name-Realm keys for everyone currently in the group
+-- (including self). Used to prune members who've left.
+local function CurrentRosterSet()
+    local set = { [playerFullName] = true }
+    if not IsInGroup() then return set end
+    local count = GetNumGroupMembers() or 0
+    local prefix
+    if IsInRaid() then
+        prefix = "raid"
+        -- raid units include self, so iterate all of them
+        for i = 1, count do
+            local full = UnitFullNameNormalized(prefix .. i)
+            if full then set[full] = true end
+        end
+    else
+        -- party units exclude self; count includes self so iterate count-1
+        prefix = "party"
+        for i = 1, count - 1 do
+            local full = UnitFullNameNormalized(prefix .. i)
+            if full then set[full] = true end
+        end
+    end
+    return set
+end
+
+local function PruneDepartedMembers()
+    if not playerFullName then return end
+    local roster = CurrentRosterSet()
+    for name in pairs(members) do
+        if name ~= playerFullName and not roster[name] then
+            members[name] = nil
+            ns.ui.RemoveMember(name)
+        end
+    end
 end
 
 local function RefreshSpec()
@@ -185,6 +229,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
         EnsureSelfRow()
         AnnounceSelf()
     elseif event == "PLAYER_ENTERING_WORLD" or event == "GROUP_ROSTER_UPDATE" then
+        PruneDepartedMembers()
         EnsureSelfRow()
         AnnounceSelf()
     elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
@@ -199,6 +244,14 @@ frame:SetScript("OnEvent", function(_, event, ...)
         if not IsSpellEnabled(spellID) then return end
         local cd = ns.GetSpellCD(playerClass, playerSpecID, spellID)
         if cd then
+            -- Prefer the live-queried cooldown so talent reductions
+            -- (e.g. Evoker Quell via Extended Flight) are respected.
+            if C_Spell and C_Spell.GetSpellCooldown then
+                local info = C_Spell.GetSpellCooldown(spellID)
+                if info and info.duration and info.duration > 1.4 then
+                    cd = math.floor(info.duration + 0.5)
+                end
+            end
             localActive[spellID] = GetTime() + cd
             ns.ui.TriggerCD(playerFullName, spellID, cd)
             ns.comm.Send(string.format("CD:%d:%d", spellID, cd))

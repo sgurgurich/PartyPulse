@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.21.0
+
+- Broadcast the live-queried cooldown from `C_Spell.GetSpellCooldown` instead of the hardcoded table value whenever the API reports a sane duration. Talent reductions (e.g. Evoker Quell via Extended Flight, or any future class tweak) now flow through to peers correctly, without needing per-spec overrides in `Spells.lua`.
+- Remove party members' rows when they leave the group (or the group disbands) instead of keeping stale rows until the next `/reload`. Triggered from `PLAYER_ENTERING_WORLD` / `GROUP_ROSTER_UPDATE` by diffing the current roster against the cached member list.
+
 ## v0.20.2
 
 - Fix party members' kicks not showing in cross-realm instance groups (M+, LFG, LFR). Addon messages are now sent on `INSTANCE_CHAT` when in an instance group; `PARTY`/`RAID` silently dropped messages for cross-realm teammates, so HELLOs and CDs never reached them.
